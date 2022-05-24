@@ -12,6 +12,7 @@ from collections import OrderedDict
 from itertools import chain
 import logging as log
 from django.db.models import Q
+import json
 
 # pylint: disable=attribute-defined-outside-init
 class GetProgramTopics(APIView):
@@ -148,6 +149,7 @@ class GetProgramTags(APIView):
     def get(self,request):
         prog_uuids = request.GET.get('uuids')
         resume_data = request.GET.get('resume_data')
+        accept_language = request.GET.get('accept_language')
         log.info("Resume data received: {}".format(resume_data))
         log.info("Program UUIDS: {}".format(prog_uuids))
         tags = list()
@@ -156,11 +158,19 @@ class GetProgramTags(APIView):
                 try:
                     program = Program.objects.get(uuid=prog_id)
                     log.info("Enrolled Program: {}".format(program.title))
+                    converted_program = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Program')).active_translations(title=program.title)
                     response = {
                         "program_uuid":prog_id,
                         "program_title":program.title,
-                        "tags":[tags.name for tags in program.program_topics.all()]
+                        "converted_program_title":converted_program[0].title,
+                        "tags":[]
                     }
+                    all_tag_names = {tag.name for tag in program.program_topics.all()}
+                    for tag in all_tag_names:
+                        tags_data = {}
+                        converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title=tag)
+                        tags_data[tag]= converted_tag[0].title
+                        response['tags'].append(tags_data)
                     tags.append(response)
                 except Program.DoesNotExist:
                     print("Program not found with uuid: %s",prog_id)
@@ -180,9 +190,11 @@ class GetProgramTags(APIView):
                 resume_prog_uuid = [str(prog.uuid) for prog in resume_course_programs]
                 for prog in tags:
                     if prog['program_uuid'] in resume_prog_uuid:
+                        converted_course_name = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Course')).active_translations(title=course.title)
                         prog['resume_program'] = {
                             "course_id": resume_data[0],
                             "course_name": course.title,
+                            "converted_course_name":converted_course_name[0].title,
                             "block_id": resume_data[-1],
                         }
         return Response(tags,status=status.HTTP_200_OK)
