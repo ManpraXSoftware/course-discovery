@@ -169,7 +169,8 @@ class GetProgramTags(APIView):
                     for tag in all_tag_names:
                         tags_data = {}
                         converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title=tag)
-                        tags_data[tag]= converted_tag[0].title
+                        tags_data["tag_title"]= tag
+                        tags_data["converted_tag_title"]= converted_tag[0].title
                         response['tags'].append(tags_data)
                     tags.append(response)
                 except Program.DoesNotExist:
@@ -207,6 +208,16 @@ class GetAllPrograms(APIView):
         for program in programs:
             result[str(program.uuid)] = list(chain(*program.courses.all().values_list('key')))
         return Response(result,status=status.HTTP_200_OK)
+
+class GetProgram(APIView):
+    permission_classes = (AllowAny,)
+    def get(self,request):
+        program_uuid = request.GET.get('program_uuid')
+        program = Program.objects.filter(uuid=program_uuid)
+        result = list()
+        result.append(program[0].title)
+        return Response(result,status=status.HTTP_200_OK)
+
 
 class GetCourseReportsData(APIView):
     permission_classes = (AllowAny,)
