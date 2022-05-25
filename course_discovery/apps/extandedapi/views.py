@@ -169,7 +169,8 @@ class GetProgramTags(APIView):
                     for tag in all_tag_names:
                         tags_data = {}
                         converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title=tag)
-                        tags_data[tag]= converted_tag[0].title
+                        tags_data["tag_title"]= tag
+                        tags_data["converted_tag_title"]= converted_tag[0].title
                         response['tags'].append(tags_data)
                     tags.append(response)
                 except Program.DoesNotExist:
