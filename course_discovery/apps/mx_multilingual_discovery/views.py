@@ -29,11 +29,11 @@ class GetKeyData(APIView):
         key_type = request.GET.get('type')
         if key_type == 'course':
             try:
-                course = Course.objects.get(pk=key)
+                courserun = CourseRun.objects.get(pk=key)
                 response = {
-                    "title":course.title,
-                    "short_description":course.short_description,
-                    "full_description":course.full_description
+                    "title":courserun.course.title,
+                    "short_description":courserun.course.short_description,
+                    "full_description":courserun.course.full_description
                 }
                 return Response(response,status=status.HTTP_200_OK)
             except Course.DoesNotExist:
