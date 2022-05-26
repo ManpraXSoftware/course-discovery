@@ -164,7 +164,7 @@ class GetProgramTags(APIView):
                     response = {
                         "program_uuid":prog_id,
                         "program_title":program.title,
-                        "converted_program_title":converted_program[0].title,
+                        "converted_program_title":converted_program[0].title if converted_program.count() else program.title,
                         "tags":[]
                     }
                     all_tag_names = {tag.name for tag in program.program_topics.all()}
@@ -172,7 +172,7 @@ class GetProgramTags(APIView):
                         tags_data = {}
                         converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title=tag)
                         tags_data["tag_title"]= tag
-                        tags_data["converted_tag_title"]= converted_tag[0].title
+                        tags_data["converted_tag_title"]= converted_tag[0].title if converted_tag.count() else tag
                         response['tags'].append(tags_data)
                     tags.append(response)
                 except Program.DoesNotExist:
@@ -197,7 +197,7 @@ class GetProgramTags(APIView):
                         prog['resume_program'] = {
                             "course_id": resume_data[0],
                             "course_name": course.title,
-                            "converted_course_name":converted_course_name[0].title,
+                            "converted_course_name":converted_course_name[0].title if converted_course_name.count() else course.title,
                             "block_id": resume_data[-1],
                         }
         return Response(tags,status=status.HTTP_200_OK)
