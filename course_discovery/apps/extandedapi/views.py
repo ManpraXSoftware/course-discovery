@@ -186,6 +186,7 @@ class GetProgramTags(APIView):
                 temp_course_id = resume_data[0].replace('course-v1:','')
                 course_key = '+'.join(temp_course_id.split('+')[0:len(temp_course_id.split('+'))-1])
                 course = Course.objects.get(key=course_key)
+                log.info("retrived course is {}".format(course.title))
                 programs = Program.objects.filter(courses=course)
                 log.info("Course related programs: {}".format(programs))
                 resume_course_programs = filter(lambda x:str(x.uuid) in prog_uuids.split(','), programs)
