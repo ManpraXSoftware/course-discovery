@@ -148,6 +148,8 @@ class GetProgramTags(APIView):
     permission_classes = (IsAuthenticated,)
     def get(self,request):
         prog_uuids = request.GET.get('uuids')
+        p = prog_uuids.split(',')
+        print('here the prog_uuids are',len(p))
         resume_data = request.GET.get('resume_data')
         accept_language = request.GET.get('accept_language')
         log.info("Resume data received: {}".format(resume_data))
@@ -214,8 +216,9 @@ class GetProgram(APIView):
     def get(self,request):
         program_uuid = request.GET.get('program_uuid')
         program = Program.objects.filter(uuid=program_uuid)
+        program_title = program[0].title if len(program) else 0
         result = list()
-        result.append(program[0].title)
+        result.append(program_title)
         return Response(result,status=status.HTTP_200_OK)
 
 
