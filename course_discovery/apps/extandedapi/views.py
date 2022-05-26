@@ -149,7 +149,7 @@ class GetProgramTags(APIView):
     def get(self,request):
         prog_uuids = request.GET.get('uuids')
         p = prog_uuids.split(',')
-        print('here the prog_uuids are',len(p))
+        log.info('here the prog_uuids are {}'.format(len(p)))
         resume_data = request.GET.get('resume_data')
         accept_language = request.GET.get('accept_language')
         log.info("Resume data received: {}".format(resume_data))
