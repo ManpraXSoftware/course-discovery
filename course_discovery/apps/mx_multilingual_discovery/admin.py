@@ -10,9 +10,12 @@ class CourseChoiceField(forms.ModelChoiceField):
     # field to get the course key for the API hit.
      def label_from_instance(self, obj):
          
-         return "{} ({})".format(obj.title, obj.canonical_course_run)
+         return "{} ({})".format(obj.course.title, obj.course.canonical_course_run)
 
 class MultilingualDiscoveryAdmin(TranslatableAdmin):
+    # search_fields = ('course_title')
+    # raw_id_fields = ('course_title',)
+    # autocomplete_fields = ['course_title']
 
     class Media:  
         # js file for the admin interface customize.  
@@ -27,7 +30,7 @@ class MultilingualDiscoveryAdmin(TranslatableAdmin):
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         kwargs['required'] = False
         if db_field.name == 'course_title':
-            return CourseChoiceField(queryset=Course.objects.all(), required=False)
+            return CourseChoiceField(queryset=CourseRun.objects.all(), required=False)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 admin.site.register(MultiLingualDiscovery, MultilingualDiscoveryAdmin)
