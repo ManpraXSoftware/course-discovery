@@ -19,6 +19,7 @@ CORS_ORIGIN_WHITELIST = (
 )
 
 HAYSTACK_CONNECTIONS['default']['URL'] = 'http://edx.devstack.elasticsearch:9200/'
+# HAYSTACK_CONNECTIONS['default']['URL'] = 'http://localhost:9200/'
 
 SOCIAL_AUTH_REDIRECT_IS_HTTPS = False
 
@@ -55,10 +56,17 @@ DEFAULT_PARTNER_ID = 1
 COMPRESS_OFFLINE = False
 COMPRESS_ENABLED = False
 
+LANGUAGE_CODE  = 'en' 
+PARLER_DEFAULT_LANGUAGE_CODE = LANGUAGE_CODE
 PARLER_LANGUAGES = {
     1: (
         {'code': LANGUAGE_CODE, },
-        {'code': 'es', },
+        {'code': 'kn', },
+        {'code': 'hi', },
+        {'code': 'ml', },
+        {'code': 'te', },
+        {'code': 'ta', },
+        {'code': 'bn', },
     ),
     'default': {
          'fallbacks': [PARLER_DEFAULT_LANGUAGE_CODE],
