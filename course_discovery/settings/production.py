@@ -106,6 +106,7 @@ PARLER_LANGUAGES = {
         {'code': 'ml', },
         {'code': 'te', },
         {'code': 'ta', },
+        {'code': 'bn', },
     ),
     'default': {
          'fallbacks': [PARLER_DEFAULT_LANGUAGE_CODE],
