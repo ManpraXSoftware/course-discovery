@@ -333,6 +333,7 @@ class ProgramIndex(BaseIndex, indexes.Indexable, OrganizationsMixin):
     credit_backing_organizations = indexes.MultiValueField(faceted=True)
     card_image_url = indexes.CharField(model_attr='card_image_url', null=True)
     status = indexes.CharField(model_attr='status', faceted=True)
+    program_language = indexes.CharField(model_attr='program_language', faceted=True)
     partner = indexes.CharField(model_attr='partner__short_code', null=True, faceted=True)
     start = indexes.DateTimeField(model_attr='start', null=True, faceted=True)
     seat_types = indexes.MultiValueField(model_attr='seat_types__slug', null=True, faceted=True)

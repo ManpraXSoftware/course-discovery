@@ -3,7 +3,9 @@
 import datetime
 import json
 from collections import OrderedDict
+from multiprocessing import context
 from operator import attrgetter
+import re
 from urllib.parse import urlencode
 from uuid import uuid4
 
@@ -44,7 +46,7 @@ from course_discovery.apps.course_metadata.models import (
 from course_discovery.apps.course_metadata.utils import get_course_run_estimated_hours, parse_course_key_fragment
 from course_discovery.apps.ietf_language_tags.models import LanguageTag
 from course_discovery.apps.publisher.api.serializers import GroupUserSerializer
-
+from .utils import filter_language
 User = get_user_model()
 
 COMMON_IGNORED_FIELDS = ('text',)
@@ -1424,6 +1426,9 @@ class MinimalProgramSerializer(DynamicFieldsMixin, BaseModelSerializer):
     type_attrs = ProgramTypeAttrsSerializer(source='type')
     degree = DegreeSerializer()
     curricula = CurriculumSerializer(many=True)
+    
+
+    
 
     
     @classmethod
@@ -1450,7 +1455,7 @@ class MinimalProgramSerializer(DynamicFieldsMixin, BaseModelSerializer):
         fields = (
             'uuid', 'title','converted_title', 'subtitle', 'type', 'type_attrs', 'status', 'marketing_slug', 'marketing_url',
             'banner_image', 'hidden', 'courses', 'authoring_organizations', 'card_image_url',
-            'is_program_eligible_for_one_click_purchase', 'degree', 'curricula', 'marketing_hook',
+            'is_program_eligible_for_one_click_purchase', 'program_language','degree', 'curricula', 'marketing_hook',
         )
         read_only_fields = ('uuid', 'marketing_url', 'banner_image')
 
@@ -1540,6 +1545,8 @@ class MinimalProgramSerializer(DynamicFieldsMixin, BaseModelSerializer):
         courses.sort(key=min_run_start)
 
         return courses
+    
+    
 
 
 class ProgramSerializer(MinimalProgramSerializer):
@@ -1564,6 +1571,7 @@ class ProgramSerializer(MinimalProgramSerializer):
     instructor_ordering = MinimalPersonSerializer(many=True)
     applicable_seat_types = serializers.SerializerMethodField()
     topics = serializers.SerializerMethodField()
+   
 
     @classmethod
     def prefetch_queryset(cls, partner, queryset=None):
@@ -1594,6 +1602,7 @@ class ProgramSerializer(MinimalProgramSerializer):
             Prefetch('corporate_endorsements', queryset=CorporateEndorsementSerializer.prefetch_queryset()),
             Prefetch('individual_endorsements', queryset=EndorsementSerializer.prefetch_queryset()),
         )
+    
 
     def get_applicable_seat_types(self, obj):
         return list(obj.type.applicable_seat_types.values_list('slug', flat=True))
@@ -2188,7 +2197,7 @@ class PersonFacetSerializer(BaseHaystackFacetSerializer):
 
 class ProgramSearchSerializer(HaystackSerializer):
     authoring_organizations = serializers.SerializerMethodField()
-
+    
     def get_authoring_organizations(self, program):
         
         organizations = program.authoring_organization_bodies
@@ -2213,6 +2222,7 @@ class ProgramSearchSerializer(HaystackSerializer):
             'topics',
             'program_topics',
             'program_subjects',
+            'program_language',
         )
 
 

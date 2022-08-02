@@ -3,6 +3,7 @@ import itertools
 import logging
 from collections import Counter, defaultdict
 from operator import attrgetter
+from platform import platform
 from urllib.parse import urljoin
 from uuid import uuid4
 
@@ -27,6 +28,9 @@ from sortedm2m.fields import SortedManyToManyField
 from stdimage.models import StdImageField
 from taggit_autosuggest.managers import TaggableManager
 
+
+
+
 from course_discovery.apps.core.models import Currency, Partner
 from course_discovery.apps.course_metadata import emails
 from course_discovery.apps.course_metadata.choices import (
@@ -50,6 +54,7 @@ from course_discovery.apps.publisher.utils import VALID_CHARS_IN_COURSE_NUM_AND_
 
 logger = logging.getLogger(__name__)
 
+ALL_LANGUAGES = getattr(settings, 'ALL_LANGUAGES', None)
 
 class DraftModelMixin(models.Model):
     """
@@ -2014,6 +2019,10 @@ class Program(PkSearchableMixin, TimeStampedModel):
     # NOTE (CCB): Editors of this field should validate the values to ensure only CourseRuns associated
     # with related Courses are stored.
     excluded_course_runs = models.ManyToManyField(CourseRun, blank=True)
+    program_language = models.CharField(
+        help_text=_('The Language of this Program.'),choices=ALL_LANGUAGES, default=ALL_LANGUAGES[41][0], max_length=255
+        
+    )
     partner = models.ForeignKey(Partner, models.CASCADE, null=True, blank=False)
     overview = models.TextField(null=True, blank=True)
     total_hours_of_effort = models.PositiveSmallIntegerField(
@@ -2165,9 +2174,8 @@ class Program(PkSearchableMixin, TimeStampedModel):
         try:
             from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
             program_name = MultiLingualDiscovery.objects.filter(content_type='Program').active_translations(title=self.title)
-            
-
             return program_name[0].title
+
         except Exception as e:
             return ""
 
