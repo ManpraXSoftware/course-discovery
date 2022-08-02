@@ -46,7 +46,6 @@ from course_discovery.apps.course_metadata.models import (
 from course_discovery.apps.course_metadata.utils import get_course_run_estimated_hours, parse_course_key_fragment
 from course_discovery.apps.ietf_language_tags.models import LanguageTag
 from course_discovery.apps.publisher.api.serializers import GroupUserSerializer
-from .utils import filter_language
 User = get_user_model()
 
 COMMON_IGNORED_FIELDS = ('text',)
