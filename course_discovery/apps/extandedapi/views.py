@@ -1,3 +1,4 @@
+import imp
 from unittest import result
 from rest_framework.response import Response
 from django.conf import settings
@@ -13,6 +14,7 @@ from itertools import chain
 import logging as log
 from django.db.models import Q
 import json
+import pymongo
 
 # pylint: disable=attribute-defined-outside-init
 class GetProgramTopics(APIView):
@@ -31,7 +33,7 @@ class GetProgramTopics(APIView):
         except Exception as e:
             sub_name = subject_name_param
         
-        
+        # import pdb;pdb.set_trace()
         body = {
             "query": {"bool": {
                 "must": [
@@ -81,7 +83,8 @@ class GetProgramTopics(APIView):
         data = {}
         for j in range(len(converted_tag)):
             data[tag[j].title] = converted_tag[j].title
-    
+        
+        
             
         for i in range(len(es_response['facets']['tags']['terms'])):
 
@@ -186,7 +189,6 @@ class GetProgramTags(APIView):
                 temp_course_id = resume_data[0].replace('course-v1:','')
                 course_key = '+'.join(temp_course_id.split('+')[0:len(temp_course_id.split('+'))-1])
                 course = Course.objects.get(key=course_key)
-                log.info("retrived course is {}".format(course.title))
                 programs = Program.objects.filter(courses=course)
                 log.info("Course related programs: {}".format(programs))
                 resume_course_programs = filter(lambda x:str(x.uuid) in prog_uuids.split(','), programs)
@@ -201,6 +203,7 @@ class GetProgramTags(APIView):
                             "converted_course_name":converted_course_name[0].title if converted_course_name.count() else course.title,
                             "block_id": resume_data[-1],
                         }
+        # import pdb;pdb.set_trace()
         return Response(tags,status=status.HTTP_200_OK)
 
 class GetAllPrograms(APIView):
@@ -222,6 +225,18 @@ class GetProgram(APIView):
         result.append(program_title)
         return Response(result,status=status.HTTP_200_OK)
 
+class GetTag(APIView):
+    permission_classes = (AllowAny,)
+    def get(self,request):
+        
+        language = request.GET.get('language')
+        tagname = request.GET.get('topicname')
+        converted_tag = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Tag')).active_translations(title=tagname)
+        result = list()
+        if converted_tag[0].title:
+            result.append(converted_tag[0].title)
+        
+        return Response(result,status=status.HTTP_200_OK)
 
 class GetCourseReportsData(APIView):
     permission_classes = (AllowAny,)
