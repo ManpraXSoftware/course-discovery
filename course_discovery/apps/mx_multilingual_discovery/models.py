@@ -14,7 +14,6 @@ class MultiLingualDiscovery(TranslatableModel):
     content_type = models.CharField(choices=CONTENT_TYPE,max_length=20,verbose_name="Content Type")
     program_title = models.ForeignKey(to=Program,on_delete=models.CASCADE,null=True,blank=True,related_name="multilingual_program",verbose_name="Program Title")
     course_title = models.ForeignKey(to=CourseRun,on_delete=models.CASCADE,null=True,blank=True,related_name="multilingual_course",verbose_name="Course Title")
-
     title = TranslatedField()
     short_description = TranslatedField()
     full_description = TranslatedField()

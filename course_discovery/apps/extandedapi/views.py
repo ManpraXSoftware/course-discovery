@@ -78,14 +78,16 @@ class GetProgramTopics(APIView):
 
         converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title__in=[i.title for i in tag])
 
+
         # data = tag.__dict__
         # import pdb;pdb.set_trace()
         data = {}
         for j in range(len(converted_tag)):
-            data[tag[j].title] = converted_tag[j].title
+            if tag[j].title != converted_tag[j].title:
+                data[tag[j].title] = converted_tag[j].title
+            else:
+                data[tag[j].title] = ''
         
-        
-            
         for i in range(len(es_response['facets']['tags']['terms'])):
 
             if es_response['facets']['tags']['terms'][i]['term'] in data:
