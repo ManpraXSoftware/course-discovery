@@ -2020,7 +2020,7 @@ class Program(PkSearchableMixin, TimeStampedModel):
     # with related Courses are stored.
     excluded_course_runs = models.ManyToManyField(CourseRun, blank=True)
     program_language = models.CharField(
-        help_text=_('The Language of this Program.'),choices=ALL_LANGUAGES, default=ALL_LANGUAGES[41][0], max_length=255
+        help_text=_('The Language of this Program.'),choices=ALL_LANGUAGES, default=ALL_LANGUAGES[41][0], null=True, max_length=255
         
     )
     partner = models.ForeignKey(Partner, models.CASCADE, null=True, blank=False)
