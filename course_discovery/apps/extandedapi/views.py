@@ -170,7 +170,11 @@ class GetProgramTags(APIView):
                         "program_uuid":prog_id,
                         "program_title":program.title,
                         "converted_program_title":converted_program[0].title if converted_program.count() else program.title,
-                        "tags":[]
+                        "tags":[],
+                        "program_course_deatails":[{
+                            "course_id" : course_det.uuid,
+                            "course_name" : course_det.title,
+                        } for course_det in program.courses.all()]
                     }
                     all_tag_names = {tag.name for tag in program.program_topics.all()}
                     for tag in all_tag_names:
