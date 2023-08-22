@@ -171,8 +171,8 @@ class GetProgramTags(APIView):
                         "program_title":program.title,
                         "converted_program_title":converted_program[0].title if converted_program.count() else program.title,
                         "tags":[],
-                        "program_course_deatails":[{
-                            "course_id" : course_det.uuid,
+                        "program_course_details":[{
+                            "course_id" : course_det.canonical_course_run.key,
                             "course_name" : course_det.title,
                         } for course_det in program.courses.all()]
                     }
