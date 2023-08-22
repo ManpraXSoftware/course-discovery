@@ -221,6 +221,21 @@ class GetAllPrograms(APIView):
             result[str(program.uuid)] = list(chain(*program.courses.all().values_list('key')))
         return Response(result,status=status.HTTP_200_OK)
 
+class GetProgramCourses(APIView):
+    permission_classes = (AllowAny,)
+    def get(self,request):
+        
+        try:
+            course_id = request.GET['course_id']
+            program = Program.objects.filter(courses__canonical_course_run__key__in=[course_id.replace(' ', '+')]).first()
+            result = list()
+            for course in program.courses.all():
+                result.append(course.canonical_course_run.key)
+
+            return Response(result,status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error':'error ocurred while getting courses{}'.format(e)},status=status.HTTP_500_Internal_Server_Error)
 class GetProgram(APIView):
     permission_classes = (AllowAny,)
     def get(self,request):
