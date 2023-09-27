@@ -226,8 +226,15 @@ class GetProgramCourses(APIView):
     def get(self,request):
         
         try:
-            course_id = request.GET['course_id']
-            program = Program.objects.filter(courses__canonical_course_run__key__in=[course_id.replace(' ', '+')]).first()
+            if 'program_uuid' in request.GET and not 'course_id' in request.GET:
+                program = Program.objects.filter(uuid=request.GET['program_uuid']).first()
+            
+            elif 'course_id' in request.GET:
+
+                course_id = request.GET['course_id']
+                
+                program = Program.objects.filter(courses__canonical_course_run__key__in=[course_id.replace(' ', '+')]).first()
+            
             result = list()
             for course in program.courses.all():
                 result.append(course.canonical_course_run.key)
@@ -245,6 +252,46 @@ class GetProgram(APIView):
         result = list()
         result.append(program_title)
         return Response(result,status=status.HTTP_200_OK)
+
+class GetProgramUsingCourseId(APIView):
+    permission_classes = (AllowAny,)
+    def get(self,request):
+        if 'course_id' in request.GET:
+            course_id = request.GET['course_id']
+            program = Program.objects.filter(courses__canonical_course_run__key=course_id.replace(' ','+')).first()
+            result = dict()
+            if program:
+                
+                topics = []
+                
+                for topic in program.program_topics.all():
+                    topics.append(topic.name)
+                
+                result['topics'] = topics
+                result['program_title'] = program.title
+                result['course_title'] = program.courses.filter(canonical_course_run__key=course_id.replace(' ','+')).first().title
+            
+            return Response(result,status=status.HTTP_200_OK)
+
+        else:
+            Response(result,status=HTTP_500_Internal_Server_Error)
+
+class GetCoursePrograms(APIView):
+    permission_classes = (AllowAny,)
+    def get(self,request):
+        if 'course_id' in request.GET:
+            course_id = request.GET['course_id']
+            programs = Program.objects.filter(courses__canonical_course_run__key=course_id.replace(' ','+')).values('uuid')
+            
+            result = list()
+            if programs:
+                result = [str(uuid['uuid']) for uuid in programs]
+                
+            return Response(result,status=status.HTTP_200_OK)
+
+        else:
+            Response(result,status=HTTP_500_Internal_Server_Error)
+
 
 class GetTag(APIView):
     permission_classes = (AllowAny,)
