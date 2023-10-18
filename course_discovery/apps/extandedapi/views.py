@@ -242,6 +242,7 @@ class GetProgramCourses(APIView):
             return Response(result,status=status.HTTP_200_OK)
 
         except Exception as e:
+            log.info("error in getting course of program is {}".format(e))
             return Response({'error':'error ocurred while getting courses{}'.format(e)},status=status.HTTP_500_Internal_Server_Error)
 class GetProgram(APIView):
     permission_classes = (AllowAny,)
