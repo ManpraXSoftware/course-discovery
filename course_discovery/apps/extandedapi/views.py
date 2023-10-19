@@ -226,15 +226,17 @@ class GetProgramCourses(APIView):
     def get(self,request):
         
         try:
+            log.info("_____________________ request parameters are {}______________".format(request.GET))
             if 'program_uuid' in request.GET and not 'course_id' in request.GET:
+                log.info("_____________________program_uuid of program whose courses are being fetched {}______________".format(request.GET['program_uuid']))
                 program = Program.objects.filter(uuid=request.GET['program_uuid']).first()
-            
+                log.info("___________ fetched program is {}".format(program))
             elif 'course_id' in request.GET:
-
+                log.info("_____________________course_id of course whose fellow courses are being fetched {}______________".format(request.GET['course_id']))
                 course_id = request.GET['course_id']
                 
                 program = Program.objects.filter(courses__canonical_course_run__key__in=[course_id.replace(' ', '+')]).first()
-            
+                log.info("___________ fetched programs for course {} are {}".format(course_id,program))
             result = list()
             for course in program.courses.all():
                 result.append(course.canonical_course_run.key)
