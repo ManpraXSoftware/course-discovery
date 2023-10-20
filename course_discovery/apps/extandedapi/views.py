@@ -239,8 +239,17 @@ class GetProgramCourses(APIView):
                 log.info("___________ fetched programs for course {} are {}".format(course_id,program))
             result = list()
             for course in program.courses.all():
-                result.append(course.canonical_course_run.key)
-
+                if course.canonical_course_run:
+                    log.info("_________ course {} having canonical_course_run it's key is {}".format(course,course.canonical_course_run.key))
+                    result.append(course.canonical_course_run.key)
+                elif course.card_image_url:
+                    courseKey = str('course')+course.card_image_url.split('asset')[1].split('type')[0][0:-1]
+                    log.info("_________ course {} having card_image_url it's key is {}".format(course,courseKey))
+                    result.append(courseKey)
+                else:
+                    log.info("_________ course {} neither having card_image_url nor canonical_course_run".format(course))
+                    continue
+            
             return Response(result,status=status.HTTP_200_OK)
 
         except Exception as e:
