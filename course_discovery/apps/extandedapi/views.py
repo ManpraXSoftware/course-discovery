@@ -265,6 +265,18 @@ class GetProgram(APIView):
         result.append(program_title)
         return Response(result,status=status.HTTP_200_OK)
 
+class GetProgramAndtags(APIView):
+    permission_classes = (AllowAny,)
+    def get(self,request):
+        program_uuid = request.GET.get('program_uuid')
+        program = Program.objects.filter(uuid=program_uuid).first()
+        result = dict()
+        if program:
+            result['program_title'] = program.title
+            result['topics'] = [topic.name for topic in program.program_topics.all()]
+        # import pdb;pdb.set_trace()
+        return Response(result,status=status.HTTP_200_OK)
+
 class GetProgramUsingCourseId(APIView):
     permission_classes = (AllowAny,)
     def get(self,request):

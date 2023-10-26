@@ -8,6 +8,7 @@ urlpatterns = [
     url(r'^getprogramcourses/$',GetProgramCourses.as_view(),name='getprogramcourses'),
     url(r'^getprograms/$',GetAllPrograms.as_view(),name='getprograms'),
     url(r'^getprogram/$',GetProgram.as_view(),name='getprogram'),
+     url(r'^getprogramandtags/$',GetProgramAndtags.as_view(),name='getprogramandtags'),
     url(r'^getprogramusingcourseid/$',GetProgramUsingCourseId.as_view(),name='getprogramusingcourseid'),
     url(r'^getcourseprograms/$',GetCoursePrograms.as_view(),name='getcourseprograms'),
     url(r'^gettag/$',GetTag.as_view(),name='gettag'),
