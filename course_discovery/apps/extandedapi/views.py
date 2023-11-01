@@ -234,8 +234,9 @@ class GetProgramCourses(APIView):
             elif 'course_id' in request.GET:
                 log.info("_____________________course_id of course whose fellow courses are being fetched {}______________".format(request.GET['course_id']))
                 course_id = request.GET['course_id']
-                
-                program = Program.objects.filter(courses__canonical_course_run__key__in=[course_id.replace(' ', '+')]).first()
+                key = course_id.replace(' ','+').split(':')[1].split('+')
+                # program = Program.objects.filter(courses__canonical_course_run__key__in=[course_id.replace(' ', '+')]).first()
+                program = Program.objects.filter(courses__key__in=[str(key[0])+str('+')+str(key[1])]).first()
                 log.info("___________ fetched programs for course {} are {}".format(course_id,program))
             result = list()
             for course in program.courses.all():
@@ -282,7 +283,9 @@ class GetProgramUsingCourseId(APIView):
     def get(self,request):
         if 'course_id' in request.GET:
             course_id = request.GET['course_id']
-            program = Program.objects.filter(courses__canonical_course_run__key=course_id.replace(' ','+')).first()
+            key = course_id.replace(' ','+').split(':')[1].split('+')
+            # program = Program.objects.filter(courses__canonical_course_run__key=course_id.replace(' ','+')).first()
+            program = Program.objects.filter(courses__key=str(key[0])+str('+')+str(key[1])).first()
             result = dict()
             if program:
                 
@@ -293,7 +296,9 @@ class GetProgramUsingCourseId(APIView):
                 
                 result['topics'] = topics
                 result['program_title'] = program.title
-                result['course_title'] = program.courses.filter(canonical_course_run__key=course_id.replace(' ','+')).first().title
+                # result['course_title'] = program.courses.filter(canonical_course_run__key=course_id.replace(' ','+')).first().title
+                result['course_title'] = program.courses.filter(key=str(key[0])+str('+')+str(key[1])).first().title
+                
             
             return Response(result,status=status.HTTP_200_OK)
 
@@ -305,8 +310,10 @@ class GetCoursePrograms(APIView):
     def get(self,request):
         if 'course_id' in request.GET:
             course_id = request.GET['course_id']
-            programs = Program.objects.filter(courses__canonical_course_run__key=course_id.replace(' ','+')).values('uuid')
-            
+            # programs = Program.objects.filter(courses__canonical_course_run__key=course_id.replace(' ','+')).values('uuid')
+            key = course_id.replace(' ','+').split(':')[1].split('+')
+            programs = Program.objects.filter(courses__key=str(key[0])+str('+')+str(key[1])).values('uuid')
+            # import pdb;pdb.set_trace()
             result = list()
             if programs:
                 result = [str(uuid['uuid']) for uuid in programs]
