@@ -242,7 +242,8 @@ class GetProgramCoursesDetail(APIView):
                 return Response({'message':'program_uuid is invalid'},status=400)
             
             result = dict()
-            result[request.GET['program_uuid']] = list()
+            result["id"] = request.GET['program_uuid']
+            result["data"]= list()
             from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
             from course_discovery.apps.course_metadata.models import CourseRun
             language = request.GET['language'] if 'language' in request.GET else 'en'
@@ -254,7 +255,7 @@ class GetProgramCoursesDetail(APIView):
                     data['title'] = course.title
                     converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=course.canonical_course_run.key).first()).language(language).first()
                     data['converted_title'] = converted_title.title if converted_title else ''
-                    result[request.GET['program_uuid']].append(data)
+                    result["data"].append(data)
                 elif course.card_image_url:
                     courseKey = str('course')+course.card_image_url.split('asset')[1].split('type')[0][0:-1]
                     log.info("_________ course {} having card_image_url it's key is {}".format(course,courseKey))
@@ -262,7 +263,7 @@ class GetProgramCoursesDetail(APIView):
                     data['title'] = course.title
                     converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=courseKey).first()).language(language).first()
                     data['converted_title'] = converted_title.title if converted_title else ''
-                    result[request.GET['program_uuid']].append(data)
+                    result["data"].append(data)
                     
                 else:
                     log.info("_________ course {} neither having card_image_url nor canonical_course_run".format(course))
