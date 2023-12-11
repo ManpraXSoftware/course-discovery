@@ -221,6 +221,61 @@ class GetAllPrograms(APIView):
             result[str(program.uuid)] = list(chain(*program.courses.all().values_list('key')))
         return Response(result,status=status.HTTP_200_OK)
 
+class GetProgramCoursesDetail(APIView):
+    permission_classes = (AllowAny,)
+    def get(self,request):
+        try:
+            log.info("_____________________ request parameters are {}______________".format(request.GET))
+            if 'program_uuid' in request.GET:
+                log.info("_____________________program_uuid of program whose courses are being fetched {}______________".format(request.GET['program_uuid']))
+                program = Program.objects.filter(uuid=request.GET['program_uuid']).first()
+                log.info("___________ fetched program is {}".format(program))
+            
+            else:
+                log.info("_____________________program_uuid is not provided in the url______________")
+                return Response({'message':'program_uuid not given in request url'},status=400)
+            
+            # import pdb;pdb.set_trace()
+
+            if program is None:
+                log.info("_____________________program_uuid is invalid______________")
+                return Response({'message':'program_uuid is invalid'},status=400)
+            
+            result = dict()
+            result[request.GET['program_uuid']] = list()
+            from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
+            from course_discovery.apps.course_metadata.models import CourseRun
+            language = request.GET['language'] if 'language' in request.GET else 'en'
+            for course in program.courses.all():
+                data = dict()
+                if course.canonical_course_run:
+                    log.info("_________ course {} having canonical_course_run it's key is {}".format(course,course.canonical_course_run.key))
+                    data['key'] = course.canonical_course_run.key
+                    data['title'] = course.title
+                    converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=course.canonical_course_run.key).first()).language(language).first()
+                    data['converted_title'] = converted_title.title if converted_title else ''
+                    result[request.GET['program_uuid']].append(data)
+                elif course.card_image_url:
+                    courseKey = str('course')+course.card_image_url.split('asset')[1].split('type')[0][0:-1]
+                    log.info("_________ course {} having card_image_url it's key is {}".format(course,courseKey))
+                    data['key'] = courseKey
+                    data['title'] = course.title
+                    converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=courseKey).first()).language(language).first()
+                    data['converted_title'] = converted_title.title if converted_title else ''
+                    result[request.GET['program_uuid']].append(data)
+                    
+                else:
+                    log.info("_________ course {} neither having card_image_url nor canonical_course_run".format(course))
+                    continue
+            
+            return Response(result,status=status.HTTP_200_OK)
+        except Exception as e:
+            log.info("error in getting course of program is {}".format(e))
+            return Response({'error':'error ocurred while getting courses{}'.format(e)},status=500)
+
+
+        
+
 class GetProgramCourses(APIView):
     permission_classes = (AllowAny,)
     def get(self,request):
@@ -240,6 +295,8 @@ class GetProgramCourses(APIView):
                 log.info("___________ fetched programs for course {} are {}".format(course_id,program))
             result = list()
             for course in program.courses.all():
+                # import pdb;pdb.set_trace()
+                # course.course_runs.core_filters['course'].key
                 if course.canonical_course_run:
                     log.info("_________ course {} having canonical_course_run it's key is {}".format(course,course.canonical_course_run.key))
                     result.append(course.canonical_course_run.key)
