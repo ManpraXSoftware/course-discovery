@@ -2229,12 +2229,16 @@ class PersonFacetSerializer(BaseHaystackFacetSerializer):
 
 class ProgramSearchSerializer(HaystackSerializer):
     authoring_organizations = serializers.SerializerMethodField()
+    banner_image = serializers.SerializerMethodField()
+    
     
     def get_authoring_organizations(self, program):
         
         organizations = program.authoring_organization_bodies
         return [json.loads(organization) for organization in organizations] if organizations else []
-
+    
+    def get_banner_image(self,program):
+        return settings.MEDIA_URL+Program.objects.filter(uuid=program.uuid).first().banner_image.medium.name
     class Meta:
         field_aliases = COMMON_SEARCH_FIELD_ALIASES
         ignore_fields = COMMON_IGNORED_FIELDS
@@ -2255,6 +2259,7 @@ class ProgramSearchSerializer(HaystackSerializer):
             'program_topics',
             'program_subjects',
             'program_language',
+            'banner_image',
         )
 
 
