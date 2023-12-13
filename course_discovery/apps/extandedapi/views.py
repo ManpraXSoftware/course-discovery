@@ -253,7 +253,9 @@ class GetProgramCoursesDetail(APIView):
                     log.info("_________ course {} having canonical_course_run it's key is {}".format(course,course.canonical_course_run.key))
                     data['key'] = course.canonical_course_run.key
                     data['title'] = course.title
-                    converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=course.canonical_course_run.key).first()).language(language).first()
+                    # converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=course.canonical_course_run.key).first()).language(language).first()
+                    # converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=course.canonical_course_run).language(language).first()
+                    converted_title = MultiLingualDiscovery.objects.filter(content_type='course', course_title__key=course.canonical_course_run.key).language(language).first()
                     data['converted_title'] = converted_title.title if converted_title else ''
                     result["data"].append(data)
                 elif course.card_image_url:
@@ -261,7 +263,8 @@ class GetProgramCoursesDetail(APIView):
                     log.info("_________ course {} having card_image_url it's key is {}".format(course,courseKey))
                     data['key'] = courseKey
                     data['title'] = course.title
-                    converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=courseKey).first()).language(language).first()
+                    # converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=courseKey).first()).language(language).first()
+                    converted_title = MultiLingualDiscovery.objects.filter(content_type='course', course_title__key=courseKey).language(language).first()
                     data['converted_title'] = converted_title.title if converted_title else ''
                     result["data"].append(data)
                     
