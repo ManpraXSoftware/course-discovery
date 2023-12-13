@@ -332,6 +332,7 @@ class ProgramIndex(BaseIndex, indexes.Indexable, OrganizationsMixin):
     authoring_organization_bodies = indexes.MultiValueField()
     credit_backing_organizations = indexes.MultiValueField(faceted=True)
     card_image_url = indexes.CharField(model_attr='card_image_url', null=True)
+    banner_image = indexes.CharField(model_attr='banner_image', null=True)
     status = indexes.CharField(model_attr='status', faceted=True)
     program_language = indexes.CharField(model_attr='program_language', faceted=True)
     partner = indexes.CharField(model_attr='partner__short_code', null=True, faceted=True)
@@ -389,6 +390,9 @@ class ProgramIndex(BaseIndex, indexes.Indexable, OrganizationsMixin):
             return []
         return [degree.search_card_ranking, degree.search_card_cost, degree.search_card_courses]
 
+    def prepare_banner_image(self,obj):
+        # import pdb;pdb.set_trace()
+        return obj.banner_image.url
 
 class PersonIndex(BaseIndex, indexes.Indexable):
     model = Person
