@@ -1420,8 +1420,8 @@ class MinimalProgramSerializer(DynamicFieldsMixin, BaseModelSerializer):
     """
     authoring_organizations = MinimalOrganizationSerializer(many=True)
     banner_image = StdImageSerializerField()
-    # courses = serializers.SerializerMethodField()
-    courses2 = serializers.SerializerMethodField()
+    courses = serializers.SerializerMethodField()
+    # courses2 = serializers.SerializerMethodField()
     type = serializers.SlugRelatedField(slug_field='name_t', queryset=ProgramType.objects.all())
     type_attrs = ProgramTypeAttrsSerializer(source='type')
     degree = DegreeSerializer()
@@ -1454,75 +1454,80 @@ class MinimalProgramSerializer(DynamicFieldsMixin, BaseModelSerializer):
         model = Program
         fields = (
             'uuid', 'title','converted_title', 'subtitle', 'type', 'type_attrs', 'status', 'marketing_slug', 'marketing_url',
-            'banner_image', 'hidden', 'courses2', 'authoring_organizations', 'card_image_url',
+            'banner_image', 'hidden','courses', 'authoring_organizations', 'card_image_url',
             'is_program_eligible_for_one_click_purchase', 'program_language','degree', 'curricula', 'marketing_hook',
         )
+        # fields = (
+        #     'uuid', 'title','converted_title', 'subtitle', 'type', 'type_attrs', 'status', 'marketing_slug', 'marketing_url',
+        #     'banner_image', 'hidden','courses', 'courses2', 'authoring_organizations', 'card_image_url',
+        #     'is_program_eligible_for_one_click_purchase', 'program_language','degree', 'curricula', 'marketing_hook',
+        # )
         read_only_fields = ('uuid', 'marketing_url', 'banner_image')
 
-    def get_courses2(self, program):
+    # def get_courses2(self, program):
             
-            result = dict()
-            result["id"] = program.uuid
-            result["data"]= list()
-            # from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
-            # from course_discovery.apps.course_metadata.models import CourseRun
-            # language = request.GET['language'] if 'language' in request.GET else 'en'
-            for course in program.courses.all():
-                data = dict()
-                if course.canonical_course_run:
-                    # log.info("_________ course {} having canonical_course_run it's key is {}".format(course,course.canonical_course_run.key))
-                    data['key'] = course.canonical_course_run.key
-                    data['title'] = course.title
-                    # converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=course.canonical_course_run.key).first()).language(language).first()
-                    # data['converted_title'] = converted_title.title if converted_title else ''
-                    result["data"].append(data)
-                elif course.card_image_url:
-                    courseKey = str('course')+course.card_image_url.split('asset')[1].split('type')[0][0:-1]
-                    # log.info("_________ course {} having card_image_url it's key is {}".format(course,courseKey))
-                    data['key'] = courseKey
-                    data['title'] = course.title
-                    # converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=courseKey).first()).language(language).first()
-                    # data['converted_title'] = converted_title.title if converted_title else ''
-                    result["data"].append(data)
-                    
-                else:
-                    log.info("_________ course {} neither having card_image_url nor canonical_course_run".format(course))
-                    continue
-            
-            return result
-
-    # def get_courses(self, program):
-        
-    #     course_runs = list(program.course_runs)
-
-    #     if self.context.get('marketable_enrollable_course_runs_with_archived'):
-    #         marketable_enrollable_course_runs = set()
+    #         result = dict()
+    #         result["id"] = program.uuid
+    #         result["data"]= list()
+    #         # from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
+    #         # from course_discovery.apps.course_metadata.models import CourseRun
+    #         # language = request.GET['language'] if 'language' in request.GET else 'en'
     #         for course in program.courses.all():
-    #             marketable_enrollable_course_runs.update(course.course_runs.marketable().enrollable())
-    #         course_runs = list(set(course_runs).intersection(marketable_enrollable_course_runs))
+    #             data = dict()
+    #             if course.canonical_course_run:
+    #                 # log.info("_________ course {} having canonical_course_run it's key is {}".format(course,course.canonical_course_run.key))
+    #                 data['key'] = course.canonical_course_run.key
+    #                 data['title'] = course.title
+    #                 # converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=course.canonical_course_run.key).first()).language(language).first()
+    #                 # data['converted_title'] = converted_title.title if converted_title else ''
+    #                 result["data"].append(data)
+    #             elif course.card_image_url:
+    #                 courseKey = str('course')+course.card_image_url.split('asset')[1].split('type')[0][0:-1]
+    #                 # log.info("_________ course {} having card_image_url it's key is {}".format(course,courseKey))
+    #                 data['key'] = courseKey
+    #                 data['title'] = course.title
+    #                 # converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=courseKey).first()).language(language).first()
+    #                 # data['converted_title'] = converted_title.title if converted_title else ''
+    #                 result["data"].append(data)
+                    
+    #             else:
+    #                 log.info("_________ course {} neither having card_image_url nor canonical_course_run".format(course))
+    #                 continue
+            
+    #         return result
 
-    #     if program.order_courses_by_start_date:
-    #         courses = self.sort_courses(program, course_runs)
-    #     else:
-    #         courses = program.courses.all()
+    def get_courses(self, program):
+        
+        course_runs = list(program.course_runs)
+
+        if self.context.get('marketable_enrollable_course_runs_with_archived'):
+            marketable_enrollable_course_runs = set()
+            for course in program.courses.all():
+                marketable_enrollable_course_runs.update(course.course_runs.marketable().enrollable())
+            course_runs = list(set(course_runs).intersection(marketable_enrollable_course_runs))
+
+        if program.order_courses_by_start_date:
+            courses = self.sort_courses(program, course_runs)
+        else:
+            courses = program.courses.all()
 
         
-    #     course_serializer = MinimalProgramCourseSerializer(
-    #         courses,
-    #         many=True,
-    #         context={
-    #             'request': self.context.get('request'),
-    #             'published_course_runs_only': self.context.get('published_course_runs_only'),
-    #             'exclude_utm': self.context.get('exclude_utm'),
-    #             'program': program,
-    #             'course_runs': course_runs,
-    #             'use_full_course_serializer': self.context.get('use_full_course_serializer', False),
+        course_serializer = MinimalProgramCourseSerializer(
+            courses,
+            many=True,
+            context={
+                'request': self.context.get('request'),
+                'published_course_runs_only': self.context.get('published_course_runs_only'),
+                'exclude_utm': self.context.get('exclude_utm'),
+                'program': program,
+                'course_runs': course_runs,
+                'use_full_course_serializer': self.context.get('use_full_course_serializer', False),
                 
                 
-    #         }
-    #     )
+            }
+        )
        
-    #     return course_serializer.data
+        return course_serializer.data
 
     def sort_courses(self, program, course_runs):
         """
