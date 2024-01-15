@@ -1,0 +1,3 @@
+[submodule "course_discovery/apps/mx_discovery"]
+	path = course_discovery/apps/mx_discovery
+	url = https://alok.kumar:xamcv3uzuvv7vkf57h2rl4pu63q5bqfkf5izdfjxg7cxmexn47qa@manprax.visualstudio.com/DefaultCollection/MXLMS/_git/mx_discovery

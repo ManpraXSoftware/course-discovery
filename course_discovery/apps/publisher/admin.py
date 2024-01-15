@@ -16,7 +16,7 @@ from course_discovery.apps.publisher.models import OrganizationExtension, Organi
 class OrganizationExtensionAdmin(GuardedModelAdminMixin, SimpleHistoryAdmin):
     list_display = ['organization', 'group']
     search_fields = ['organization__name', 'group__name']
-    autocomplete_fields = ['organization', 'group']
+    # autocomplete_fields = ['organization', 'group']
 
     def save_model(self, request, obj, form, change):
         obj.save()

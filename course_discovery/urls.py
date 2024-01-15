@@ -65,6 +65,11 @@ urlpatterns += [
     path('', include('csrf.urls')),
 ]
 
+# MX added urls
+urlpatterns += [
+    path('api/mx_discovery/', include(('course_discovery.apps.mx_discovery.urls','mx_discovery'),namespace='mx_discovery')),
+]
+
 # Add the catalog extension urls if edx_catalog_extensions is installed.
 if 'course_discovery.apps.edx_catalog_extensions' in settings.INSTALLED_APPS:
     urlpatterns.append(

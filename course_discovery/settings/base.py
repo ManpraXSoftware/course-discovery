@@ -93,10 +93,15 @@ ES_APPS = [
     'django_elasticsearch_dsl_drf',
 ]
 
+MX_CUSTOM_APPS = [
+        'course_discovery.apps.mx_discovery.apps.CatalogConfig'
+]
+
+
 INSTALLED_APPS += THIRD_PARTY_APPS
 INSTALLED_APPS += PROJECT_APPS
 INSTALLED_APPS += ES_APPS
-
+INSTALLED_APPS += MX_CUSTOM_APPS
 MIDDLEWARE = (
     'corsheaders.middleware.CorsMiddleware',
     'edx_django_utils.monitoring.CookieMonitoringMiddleware',
@@ -404,6 +409,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'course_discovery.apps.api.pagination.PageNumberPagination',
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.DjangoModelPermissions',
+        
     ),
     'PAGE_SIZE': 20,
     'TEST_REQUEST_RENDERER_CLASSES': (
