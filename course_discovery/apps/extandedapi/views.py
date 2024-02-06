@@ -15,6 +15,7 @@ import logging as log
 from django.db.models import Q
 import json
 import pymongo
+from .serialializers import GetProgramCourseSerializer
 
 # pylint: disable=attribute-defined-outside-init
 class GetProgramTopics(APIView):
@@ -451,6 +452,7 @@ class GetReportsFilterData(APIView):
 
         return Response(result,status=status.HTTP_200_OK)
     
+
 class GetProgramDetails(APIView):
     permission_classes = (AllowAny,)
 
@@ -458,9 +460,4 @@ class GetProgramDetails(APIView):
         program_uuid = request.GET.get("program_uuid")
         program = Program.objects.get(uuid=program_uuid)
         program_courses = program.courses.all()
-        result = {"course_ids":[]}
-        for course in program_courses:
-            if course.canonical_course_run:
-                result["course_ids"].append(course.canonical_course_run.key)
-
-        return Response(result,status=status.HTTP_200_OK)
+        return Response(GetProgramCourseSerializer(program_courses, many=True).data,status=status.HTTP_200_OK)
