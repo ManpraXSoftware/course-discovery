@@ -450,3 +450,17 @@ class GetReportsFilterData(APIView):
         result['courses']=courses
 
         return Response(result,status=status.HTTP_200_OK)
+    
+class GetProgramDetails(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        program_uuid = request.GET.get("program_uuid")
+        program = Program.objects.get(uuid=program_uuid)
+        program_courses = program.courses.all()
+        result = {"course_ids":[]}
+        for course in program_courses:
+            if course.canonical_course_run:
+                result["course_ids"].append(course.canonical_course_run.key)
+
+        return Response(result,status=status.HTTP_200_OK)

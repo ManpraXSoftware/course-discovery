@@ -15,4 +15,5 @@ urlpatterns = [
     url(r'^gettag/$',GetTag.as_view(),name='gettag'),
     url(r'^getcoursereports/$',GetCourseReportsData.as_view(),name='getcoursereports'),
     url(r'^getreportsfilters/$',GetReportsFilterData.as_view(),name='getreportsfilters'),
+    url(r'^getprogramdetails/$', GetProgramDetails.as_view(), name="getprogramdetails")
 ]
