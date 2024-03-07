@@ -25,7 +25,10 @@ class Command(HaystackCommand):
         )
 
     def get_record_count(self, conn, index_name):
-        return conn.count(index_name).get('count')
+        try:
+            return conn.count(index_name).get('count')
+        except:
+            return 0
 
     def handle(self, **options):
         from django.utils import translation
