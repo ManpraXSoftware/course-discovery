@@ -11,4 +11,5 @@ app_name = 'api'
 
 urlpatterns = [
     path('v1/', include('course_discovery.apps.api.v1.urls')),
+    path('mx/', include('course_discovery.apps.api.mx.urls')),
 ]
