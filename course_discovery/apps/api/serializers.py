@@ -47,6 +47,8 @@ from course_discovery.apps.course_metadata.models import (
 from course_discovery.apps.course_metadata.utils import get_course_run_estimated_hours, parse_course_key_fragment
 from course_discovery.apps.ietf_language_tags.models import LanguageTag
 from course_discovery.apps.publisher.api.serializers import GroupUserSerializer
+from course_discovery.apps.core.models import Partner
+from taggit.models import Tag
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -320,7 +322,7 @@ class VideoSerializer(MediaSerializer):
 
     class Meta:
         model = Video
-        fields = ('src', 'description', 'image',)
+        fields = ('id','src', 'description', 'image',)
 
 
 class GeoLocationSerializer(BaseModelSerializer):
@@ -845,7 +847,7 @@ class ProgramTypeSerializer(BaseModelSerializer):
 
     class Meta:
         model = ProgramType
-        fields = ('uuid', 'name', 'logo_image', 'applicable_seat_types', 'slug', 'coaching_supported')
+        fields = ('id','uuid', 'name', 'logo_image', 'applicable_seat_types', 'slug', 'coaching_supported')
 
 
 class LevelTypeSerializer(BaseModelSerializer):
@@ -1175,7 +1177,7 @@ class MinimalCourseSerializer(FlexFieldsSerializerMixin, TimestampModelSerialize
 
     class Meta:
         model = Course
-        fields = ('key', 'uuid', 'title', 'course_runs', 'entitlements', 'owners', 'image',
+        fields = ('id','key', 'uuid', 'title', 'course_runs', 'entitlements', 'owners', 'image',
                   'short_description', 'type', 'url_slug', 'course_type', 'enterprise_subscription_inclusion',
                   'excluded_from_seo', 'excluded_from_search')
 
@@ -1568,6 +1570,7 @@ class CourseWithProgramsSerializer(CourseSerializer):
     class Meta(CourseSerializer.Meta):
         model = Course
         fields = CourseSerializer.Meta.fields + (
+            'id',
             'programs',
             'course_run_keys',
             'editable',
@@ -1855,7 +1858,7 @@ class DegreeSerializer(BaseModelSerializer):
             'micromasters_background_image', 'micromasters_org_name_override', 'costs_fine_print',
             'deadlines_fine_print', 'hubspot_lead_capture_form_id', 'additional_metadata',
             'specializations', 'program_duration_override', 'display_on_org_page',
-            'excluded_from_search', 'excluded_from_seo'
+            'excluded_from_search', 'excluded_from_seo',"video"
         )
 
     def get_micromasters_path(self, degree):
@@ -1956,13 +1959,13 @@ class MinimalProgramSerializer(TaggitSerializer, FlexFieldsSerializerMixin, Base
     class Meta:
         model = Program
         fields = (
-            'uuid', 'title', 'subtitle', 'type', 'type_attrs', 'status', 'marketing_slug', 'marketing_url',
+            'id','uuid', 'title', 'subtitle', 'type', 'type_attrs', 'status', 'marketing_slug', 'marketing_url',
             'banner_image', 'hidden', 'courses', 'authoring_organizations', 'card_image_url',
             'is_program_eligible_for_one_click_purchase', 'degree', 'curricula', 'marketing_hook',
             'total_hours_of_effort', 'recent_enrollment_count', 'organization_short_code_override',
             'organization_logo_override_url', 'primary_subject_override', 'level_type_override', 'language_override',
             'labels', 'taxi_form', 'program_duration_override', 'data_modified_timestamp',
-            'excluded_from_search', 'excluded_from_seo', 'subscription',
+            'excluded_from_search', 'excluded_from_seo', 'subscription','partner'
 
         )
         read_only_fields = ('uuid', 'marketing_url', 'banner_image', 'data_modified_timestamp')
@@ -2624,3 +2627,74 @@ class MetadataWithType(MetadataWithRelatedChoices):
             return self.create_type_options(info)
 
         return info
+
+class CreateProgramSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Program
+        fields = "__all__"
+
+class CustomProgramSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+    type = ProgramTypeSerializer()
+    courses = MinimalCourseSerializer(many=True)
+    labels = serializers.SerializerMethodField()
+
+    def get_status(self, obj):
+        return obj.get_status_display()
+    
+    def get_labels(self, obj):
+        data = [{"id":tag.id, "name":tag.name} for tag in obj.labels.all()]
+        return data
+    
+    class Meta:
+        model = Program
+        fields = "__all__"
+
+class PartnerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Partner
+        fields = "__all__"
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = "__all__"
+
+class CreateDegreeSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Degree
+        fields = ("title", 'subtitle','type', 'marketing_slug', 'partner')
+
+class DegreeDataSerializer(serializers.ModelSerializer):
+    labels = serializers.SerializerMethodField(read_only=True) 
+    
+    class Meta:
+        model = Degree
+        fields = "__all__"
+        
+    def get_labels(self, obj):
+        data = [tag.id for tag in obj.labels.all()]
+        return data
+
+class DegreeCurriculumSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Curriculum
+        fields = "__all__"
+
+class CustomDegreeIconTextPairingSerializer(BaseModelSerializer):
+    icon = serializers.SerializerMethodField()
+    
+    def get_icon(self, obj):
+        return obj.get_icon_display()
+    
+    class Meta:
+        model = IconTextPairing
+        fields = "__all__"
+              
+class DegreeIconTextPairingSerializer(BaseModelSerializer):
+    class Meta:
+        model = IconTextPairing
+        fields = "__all__"

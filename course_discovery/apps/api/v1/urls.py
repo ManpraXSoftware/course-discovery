@@ -18,12 +18,15 @@ from course_discovery.apps.api.v1.views.organizations import OrganizationViewSet
 from course_discovery.apps.api.v1.views.pathways import PathwayViewSet
 from course_discovery.apps.api.v1.views.people import PersonViewSet
 from course_discovery.apps.api.v1.views.program_types import ProgramTypeViewSet
-from course_discovery.apps.api.v1.views.programs import ProgramViewSet
+from course_discovery.apps.api.v1.views.programs import ProgramViewSet, CreateProgramViewSet
 from course_discovery.apps.api.v1.views.sources import SourceViewSet
 from course_discovery.apps.api.v1.views.subjects import SubjectViewSet
 from course_discovery.apps.api.v1.views.topics import TopicViewSet
 from course_discovery.apps.api.v1.views.user_management import UsernameReplacementView
-
+from course_discovery.apps.api.v1.views.partners import PartnersViewSet
+from course_discovery.apps.api.v1.views.programs import TagsList
+from course_discovery.apps.api.v1.views.degrees import DegreeViewSet, VideoViewSet,CurriculumViewSet
+from course_discovery.apps.api.v1.views.degrees import QuickfactViewSet
 app_name = 'v1'
 
 partners_router = routers.SimpleRouter()
@@ -66,5 +69,11 @@ router.register(r'search/courses', search_views.CourseSearchViewSet, basename='s
 router.register(r'search/course_runs', search_views.CourseRunSearchViewSet, basename='search-course_runs')
 router.register(r'search/programs', search_views.ProgramSearchViewSet, basename='search-programs')
 router.register(r'search/people', search_views.PersonSearchViewSet, basename='search-people')
-
+router.register(r'program_data', CreateProgramViewSet, basename='create-program')
+router.register(r'partners', PartnersViewSet, basename='partners')
+router.register(r'tags', TagsList, basename='tags')
+router.register(r'degree', DegreeViewSet, basename='degree')
+router.register(r'videos', VideoViewSet, basename='videos')
+router.register(r'curriculums', CurriculumViewSet, basename='curriculums')
+router.register(r'quickfacts', QuickfactViewSet, basename='quickfacts')
 urlpatterns += router.urls
