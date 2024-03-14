@@ -14,6 +14,9 @@ from course_discovery.apps.api.cache import CompressedCacheResponseMixin
 from course_discovery.apps.api.pagination import ProxiedPagination
 from course_discovery.apps.api.utils import get_query_param
 from course_discovery.apps.course_metadata.models import Program
+from django.core.paginator import Paginator
+from django.db.models import Q
+from taggit.models import Tag
 
 
 class ProgramViewSet(CompressedCacheResponseMixin, viewsets.ReadOnlyModelViewSet):
@@ -135,3 +138,65 @@ class ProgramViewSet(CompressedCacheResponseMixin, viewsets.ReadOnlyModelViewSet
             return Response(msg)
         else:
             return Response('Bad image data in request', status=status.HTTP_400_BAD_REQUEST)
+
+class CreateProgramViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.CreateProgramSerializer
+    permission_classes = (IsAuthenticated,)
+    queryset = Program.objects.all().order_by('-id')
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'partial_update']:
+            return serializers.CreateProgramSerializer
+        return serializers.CustomProgramSerializer
+
+    def list(self,request):
+        search = self.request.query_params.get("q", None)
+        queryset = self.queryset
+        if search and self.request.query_params.get("status", '') != '':
+            status_list = self.request.query_params.get("status").split(",")
+            queryset = queryset.filter(status__in=status_list).filter(Q(title__icontains=search)|Q(subtitle=search))
+        elif search:
+            queryset = queryset.filter(Q(title__icontains=search)|Q(subtitle=search))
+        elif self.request.query_params.get("status", '') != '':
+          status_list = self.request.query_params.get("status").split(",")
+          queryset = queryset.filter(status__in=status_list)
+        page = self.request.query_params.get("page",1)
+        page_size = self.request.query_params.get("page_size",10)
+        paginator = Paginator(queryset, page_size)
+        paginated_data = paginator.page(page)
+        serializer = self.get_serializer(paginated_data.object_list, many=True)
+        return Response({"results":serializer.data,"per_page":paginated_data.paginator.per_page,
+              "num_pages":paginated_data.paginator.num_pages,'count':paginated_data.paginator.count},status=status.HTTP_200_OK)
+
+    def create(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+          serializer.save()
+          return Response([],status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def update(self, request, pk, partial=True):
+        program = Program.objects.get(id=pk)
+        serializer =  self.get_serializer(program, data=request.data, partial=True)
+        if serializer.is_valid():
+          serializer.save()
+          if request.data.getlist("labels"):
+            program.labels.clear()
+            if request.data.getlist('labels')[0] != '':
+              program.labels.add(*Tag.objects.filter(id__in=request.data.getlist("labels")))
+          return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def retrieve(self, request, pk):
+        program = Program.objects.get(uuid=pk)
+        serializer =  self.get_serializer(program)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class TagsList(viewsets.ModelViewSet):
+    serializer_class = serializers.TagSerializer
+    permission_classes = (IsAuthenticated,)
+    queryset = Tag.objects.all()
+
+    def list(self, request):
+        serializer = self.get_serializer(self.queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
