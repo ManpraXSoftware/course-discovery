@@ -5,7 +5,7 @@ from course_discovery.apps.api.fields import HtmlField
 from taggit.serializers import TaggitSerializer, TagListSerializerField
 
 
-class MxCourseRunWithProgramsSerializer(CourseRunWithProgramsSerializer):
+class MxCourseRunWithProgramsSerializer(CourseRunWithProgramsSerializer, TaggitSerializer):
     end = serializers.DateTimeField(required=False)
     start = serializers.DateTimeField(required=False)
     run_type = serializers.SlugRelatedField(required=False, slug_field='uuid', source='type',
@@ -15,7 +15,7 @@ class MxCourseRunWithProgramsSerializer(CourseRunWithProgramsSerializer):
     short_description = HtmlField(
         required=False, allow_blank=True, allow_null=True)
     outcome = HtmlField(required=False, allow_blank=True, allow_null=True)
-    tags = TagListSerializerField(allow_null=True)
+    tags = TagListSerializerField(required=False)
 
     class Meta(CourseRunWithProgramsSerializer.Meta):
         model = CourseRun
