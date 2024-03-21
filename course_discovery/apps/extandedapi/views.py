@@ -461,3 +461,64 @@ class GetProgramDetails(APIView):
         program = Program.objects.get(uuid=program_uuid)
         program_courses = program.courses.all()
         return Response(GetProgramCourseSerializer(program_courses, many=True).data,status=status.HTTP_200_OK)
+
+
+class GetProgramTags2(APIView):
+    permission_classes = (IsAuthenticated,)
+    def get(self,request):
+        prog_uuids = request.GET.get('uuids')
+        p = prog_uuids.split(',')
+        log.info('here the prog_uuids are {}'.format(len(p)))
+        resume_data = request.GET.get('resume_data')
+        accept_language = request.GET.get('accept_language')
+        log.info("Resume data received: {}".format(resume_data))
+        log.info("Program UUIDS: {}".format(prog_uuids))
+        tags = list()
+        if prog_uuids:
+            for prog_id in prog_uuids.split(','):
+                try:
+                    program = Program.objects.get(uuid=prog_id)
+                    log.info("Enrolled Program: {}".format(program.title))
+                    converted_program = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Program')).active_translations(title=program.title)
+                    response = {
+                        "program_uuid":prog_id,
+                        "program_title":program.title,
+                        "converted_program_title":converted_program[0].title if converted_program.count() else program.title,
+                        "tags":[]
+                    }
+                    log.info("---------program response--{}".format(response))
+                    all_tag_names = {tag.name for tag in program.program_topics.all()}
+                    for tag in all_tag_names:
+                        tags_data = {}
+                        converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title=tag)
+                        tags_data["tag_title"]= tag
+                        tags_data["converted_tag_title"]= converted_tag[0].title if converted_tag.count() else tag
+                        response['tags'].append(tags_data)
+                    tags.append(response)
+                except Program.DoesNotExist:
+                    log.info("Program not found with uuid: {}".format(prog_id))
+                except Exception as e:
+                   log.info("Error occured due to: {}".format(e))
+            if resume_data:
+                resume_str = resume_data.replace(' ','+')
+                resume_data = resume_str.split(',')
+                log.info("Resume data received {}".format(resume_data))
+                temp_course_id = resume_data[0].replace('course-v1:','')
+                course_key = '+'.join(temp_course_id.split('+')[0:len(temp_course_id.split('+'))-1])
+                course = Course.objects.get(key=course_key)
+                programs = Program.objects.filter(courses=course)
+                log.info("Course related programs: {}".format(programs))
+                resume_course_programs = filter(lambda x:str(x.uuid) in prog_uuids.split(','), programs)
+                log.info("Resume course programs: {}".format(resume_course_programs))
+                resume_prog_uuid = [str(prog.uuid) for prog in resume_course_programs]
+                for prog in tags:
+                    if prog['program_uuid'] in resume_prog_uuid:
+                        converted_course_name = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Course')).active_translations(title=course.title)
+                        prog['resume_program'] = {
+                            "course_id": resume_data[0],
+                            "course_name": course.title,
+                            "converted_course_name":converted_course_name[0].title if converted_course_name.count() else course.title,
+                            "block_id": resume_data[-1],
+                        }
+        # import pdb;pdb.set_trace()
+        return Response(tags,status=status.HTTP_200_OK)
