@@ -61,6 +61,13 @@ class ProgramAdminForm(forms.ModelForm):
 
         return self.cleaned_data
 
+    def clean_marketing_slug(self):
+        data = self.cleaned_data.get("marketing_slug")
+        if Program.objects.filter(marketing_slug=data).exists():
+            raise ValidationError(_(
+                'Marketing slug must be unique.'
+            ))
+        return data
 
 class CourseRunSelectionForm(forms.ModelForm):
     class Meta:
