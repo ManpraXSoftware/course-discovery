@@ -286,6 +286,7 @@ LANGUAGE_CODE = 'en'
 
 PARLER_DEFAULT_LANGUAGE_CODE = LANGUAGE_CODE
 
+LANGUAGES = ALL_LANGUAGES
 PARLER_LANGUAGES = {
     1: (
         {'code': LANGUAGE_CODE, },
@@ -295,6 +296,7 @@ PARLER_LANGUAGES = {
         {'code': 'te', },
         {'code': 'ta', },
         {'code': 'bn', },
+        {'code': 'or', },
     ),
     'default': {
          'fallbacks': [PARLER_DEFAULT_LANGUAGE_CODE],
