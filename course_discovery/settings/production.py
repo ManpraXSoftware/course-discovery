@@ -283,7 +283,7 @@ ALL_LANGUAGES = [
 ]
 
 LANGUAGE_CODE = 'en'
-ANGUAGES = [
+LANGUAGES = [
     ('en', u'English'),
     ('rtl', u'Right-to-Left Test Language'),
     ('eo', u'Dummy Language (Esperanto)'),  # Dummy languaged used for testing
