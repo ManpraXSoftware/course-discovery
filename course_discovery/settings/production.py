@@ -283,6 +283,104 @@ ALL_LANGUAGES = [
 ]
 
 LANGUAGE_CODE = 'en'
+ANGUAGES = [
+    ('en', u'English'),
+    ('rtl', u'Right-to-Left Test Language'),
+    ('eo', u'Dummy Language (Esperanto)'),  # Dummy languaged used for testing
+    ('fake2', u'Fake translations'),        # Another dummy language for testing (not pushed to prod)
+
+    ('am', u'አማርኛ'),  # Amharic
+    ('ar', u'العربية'),  # Arabic
+    ('az', u'azərbaycanca'),  # Azerbaijani
+    ('bg-bg', u'български (България)'),  # Bulgarian (Bulgaria)
+    ('bn-bd', u'বাংলা (বাংলাদেশ)'),  # Bengali (Bangladesh)
+    ('bn', u'Bengali'),  # Bengali (India)
+    ('bs', u'bosanski'),  # Bosnian
+    ('ca', u'Català'),  # Catalan
+    ('ca@valencia', u'Català (València)'),  # Catalan (Valencia)
+    ('cs', u'Čeština'),  # Czech
+    ('cy', u'Cymraeg'),  # Welsh
+    ('da', u'dansk'),  # Danish
+    ('de-de', u'Deutsch (Deutschland)'),  # German (Germany)
+    ('el', u'Ελληνικά'),  # Greek
+    ('en-uk', u'English (United Kingdom)'),  # English (United Kingdom)
+    ('en@lolcat', u'LOLCAT English'),  # LOLCAT English
+    ('en@pirate', u'Pirate English'),  # Pirate English
+    ('es-419', u'Español (Latinoamérica)'),  # Spanish (Latin America)
+    ('es-ar', u'Español (Argentina)'),  # Spanish (Argentina)
+    ('es-ec', u'Español (Ecuador)'),  # Spanish (Ecuador)
+    ('es-es', u'Español (España)'),  # Spanish (Spain)
+    ('es-mx', u'Español (México)'),  # Spanish (Mexico)
+    ('es-pe', u'Español (Perú)'),  # Spanish (Peru)
+    ('et-ee', u'Eesti (Eesti)'),  # Estonian (Estonia)
+    ('eu-es', u'euskara (Espainia)'),  # Basque (Spain)
+    ('fa', u'فارسی'),  # Persian
+    ('fa-ir', u'فارسی (ایران)'),  # Persian (Iran)
+    ('fi-fi', u'Suomi (Suomi)'),  # Finnish (Finland)
+    ('fil', u'Filipino'),  # Filipino
+    ('fr', u'Français'),  # French
+    ('gl', u'Galego'),  # Galician
+    ('gu', u'ગુજરાતી'),  # Gujarati
+    ('he', u'עברית'),  # Hebrew
+    ('hi', u'Hindi'),  # Hindi
+    ('hr', u'hrvatski'),  # Croatian
+    ('hu', u'magyar'),  # Hungarian
+    ('hy-am', u'Հայերեն (Հայաստան)'),  # Armenian (Armenia)
+    ('id', u'Bahasa Indonesia'),  # Indonesian
+    ('it-it', u'Italiano (Italia)'),  # Italian (Italy)
+    ('ja-jp', u'日本語 (日本)'),  # Japanese (Japan)
+    ('kk-kz', u'қазақ тілі (Қазақстан)'),  # Kazakh (Kazakhstan)
+    ('km-kh', u'ភាសាខ្មែរ (កម្ពុជា)'),  # Khmer (Cambodia)
+    ('kn', u'Kannada'),  # Kannada
+    ('ko-kr', u'한국어 (대한민국)'),  # Korean (Korea)
+    ('lt-lt', u'Lietuvių (Lietuva)'),  # Lithuanian (Lithuania)
+    ('ml', u'Malayalam'),  # Malayalam
+    ('mn', u'Монгол хэл'),  # Mongolian
+    ('mr', u'मराठी'),  # Marathi
+    ('ms', u'Bahasa Melayu'),  # Malay
+    ('nb', u'Norsk bokmål'),  # Norwegian Bokmål
+    ('ne', u'नेपाली'),  # Nepali
+    ('nl-nl', u'Nederlands (Nederland)'),  # Dutch (Netherlands)
+    ('or', u'Oriya'),  # Oriya
+    ('pl', u'Polski'),  # Polish
+    ('pt-br', u'Português (Brasil)'),  # Portuguese (Brazil)
+    ('pt-pt', u'Português (Portugal)'),  # Portuguese (Portugal)
+    ('ro', u'română'),  # Romanian
+    ('ru', u'Русский'),  # Russian
+    ('si', u'සිංහල'),  # Sinhala
+    ('sk', u'Slovenčina'),  # Slovak
+    ('sl', u'Slovenščina'),  # Slovenian
+    ('sq', u'shqip'),  # Albanian
+    ('sr', u'Српски'),  # Serbian
+    ('sv', u'svenska'),  # Swedish
+    ('sw', u'Kiswahili'),  # Swahili
+    ('ta', u'Tamil'),  # Tamil
+    ('te', u'Telugu'),  # Telugu
+    ('th', u'ไทย'),  # Thai
+    ('tr-tr', u'Türkçe (Türkiye)'),  # Turkish (Turkey)
+    ('uk', u'Українська'),  # Ukranian
+    ('ur', u'اردو'),  # Urdu
+    ('vi', u'Tiếng Việt'),  # Vietnamese
+    ('uz', u'Ўзбек'),  # Uzbek
+    ('zh-cn', u'中文 (简体)'),  # Chinese (China)
+    ('zh-hk', u'中文 (香港)'),  # Chinese (Hong Kong)
+    ('zh-tw', u'中文 (台灣)'),  # Chinese (Taiwan)
+]
+from django.conf import global_settings
+import django.conf.locale
+LANGUAGES.append(("or", 'Oriya'))
+gettext = lambda s: s
+EXTRA_LANG_INFO = {
+    'or': {
+        'bidi': False,
+        'code': 'or',
+        'name': 'Oriya',
+        'name_local': u"Oriya",
+    },
+}
+LANG_INFO = dict(django.conf.locale.LANG_INFO, **EXTRA_LANG_INFO)
+django.conf.locale.LANG_INFO = LANG_INFO
+global_settings.LANGUAGES = global_settings.LANGUAGES + [("or", 'Oriya')]
 
 PARLER_DEFAULT_LANGUAGE_CODE = LANGUAGE_CODE
 
