@@ -228,7 +228,7 @@ class ProgramAdmin(admin.ModelAdmin):
         try:
             initial_courses = form.initial['courses']
             cleaned_courses = form.cleaned_data['courses']
-            newly_added = [course.canonical_course_run.key for course in cleaned_courses if course not in initial_courses]
+            newly_added = [course.canonical_course_run.key for course in cleaned_courses if (course not in initial_courses) and course.canonical_course_run]
             super().save_model(request, obj, form, change)
             if newly_added:
                 url = settings.LMS_URL_ROOT+"/mx-user-info/create_notification/"
