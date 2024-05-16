@@ -46,6 +46,7 @@ from course_discovery.apps.course_metadata.models import (
 from course_discovery.apps.course_metadata.utils import get_course_run_estimated_hours, parse_course_key_fragment
 from course_discovery.apps.ietf_language_tags.models import LanguageTag
 from course_discovery.apps.publisher.api.serializers import GroupUserSerializer
+from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
 User = get_user_model()
 
 COMMON_IGNORED_FIELDS = ('text',)
@@ -1231,6 +1232,14 @@ class MinimalProgramCourseSerializer(MinimalCourseSerializer):
         This is shared by both MinimalProgramSerializer and ProgramSerializer!
     """
     course_runs = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
+    
+    def get_title(self, course):
+        try:
+            converted_title = MultiLingualDiscovery.objects.language(self.context['request'].headers.get("Accept-Language", 'en')).filter(content_type='Course').active_translations(title=course.title).last()
+            return converted_title.title
+        except:
+            return course.title
     
     def get_course_runs(self, course):
         course_runs = self.context['course_runs']
@@ -1511,7 +1520,6 @@ class MinimalProgramSerializer(DynamicFieldsMixin, BaseModelSerializer):
         else:
             courses = program.courses.all()
 
-        
         course_serializer = MinimalProgramCourseSerializer(
             courses,
             many=True,
@@ -2235,10 +2243,16 @@ class PersonFacetSerializer(BaseHaystackFacetSerializer):
 class ProgramSearchSerializer(HaystackSerializer):
     authoring_organizations = serializers.SerializerMethodField()
     # banner_image = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
     
+    def get_title(self, program):
+        try:
+            converted_title = MultiLingualDiscovery.objects.language(self.context.get("language", 'en')).filter(content_type='Program').active_translations(title=program.title).last()
+            return converted_title.title
+        except:
+            return program.title
     
     def get_authoring_organizations(self, program):
-        
         organizations = program.authoring_organization_bodies
         return [json.loads(organization) for organization in organizations] if organizations else []
     

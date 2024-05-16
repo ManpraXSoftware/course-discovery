@@ -158,7 +158,12 @@ class ProgramSearchViewSet(BaseHaystackViewSet):
     detail_serializer_class = serializers.ProgramSearchModelSerializer
     facet_serializer_class = serializers.ProgramFacetSerializer
     serializer_class = serializers.ProgramSearchSerializer
-
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request, "language":self.request.headers['Accept-Language']})
+        return context
+        
 
 class AggregateSearchViewSet(BaseHaystackViewSet, CatalogDataViewSet):
     """ Search all content types. """

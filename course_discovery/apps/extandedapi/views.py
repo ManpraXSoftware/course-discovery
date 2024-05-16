@@ -74,7 +74,6 @@ class GetProgramTopics(APIView):
 
         
 
-        
         tag = MultiLingualDiscovery.objects.language('en').filter(Q(content_type='Tag')).active_translations(title__in=[i['term'] for i in es_response['facets']['tags']['terms']])
 
         converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title__in=[i.title for i in tag])
@@ -84,19 +83,19 @@ class GetProgramTopics(APIView):
         # import pdb;pdb.set_trace()
         data = {}
         for j in range(len(converted_tag)):
-            if tag[j].title != converted_tag[j].title:
-                data[tag[j].title] = converted_tag[j].title
-            else:
-                data[tag[j].title] = ''
+            data[tag[j].title] = converted_tag[j].title
+            # if tag[j].title != converted_tag[j].title:
+            #     data[tag[j].title] = converted_tag[j].title
+            # else:
+            #     data[tag[j].title] = ''
         
         for i in range(len(es_response['facets']['tags']['terms'])):
-
             if es_response['facets']['tags']['terms'][i]['term'] in data:
-                 es_response['facets']['tags']['terms'][i]['converted_term'] = data[es_response['facets']['tags']['terms'][i]['term']]
-            else:
-                es_response['facets']['tags']['terms'][i]['converted_term'] = ''
+                 es_response['facets']['tags']['terms'][i]['term'] = data[es_response['facets']['tags']['terms'][i]['term']]
+            # else:
+            #     es_response['facets']['tags']['terms'][i]['term'] = es_response['facets']['tags']['terms'][i]['term']
 
-
+    
         return Response(es_response['facets']['tags'])
 
 class CustomSearch(APIView):
@@ -389,13 +388,15 @@ class GetCoursePrograms(APIView):
 class GetTag(APIView):
     permission_classes = (AllowAny,)
     def get(self,request):
-        
+        # import pdb;pdb.set_trace()
         language = request.GET.get('language')
         tagname = request.GET.get('topicname')
-        converted_tag = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Tag')).active_translations(title=tagname)
+        
+        # converted_tag = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Tag')).active_translations(title=tagname)
         result = list()
-        if converted_tag[0].title:
-            result.append(converted_tag[0].title)
+        # if converted_tag[0].title:
+        #     result.append(converted_tag[0].title)
+        result.append(tagname)
         
         return Response(result,status=status.HTTP_200_OK)
 
@@ -477,7 +478,7 @@ class GetProgramTags2(APIView):
         if prog_uuids:
             for prog_id in prog_uuids.split(','):
                 try:
-                    program = Program.objects.get(uuid=prog_id)
+                    program = Program.objects.get(uuid=prog_id, program_language=accept_language)
                     log.info("Enrolled Program: {}".format(program.title))
                     converted_program = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Program')).active_translations(title=program.title)
                     response = {

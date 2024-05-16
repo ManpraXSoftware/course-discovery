@@ -3,6 +3,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from course_discovery.apps.api import filters, serializers
 from course_discovery.apps.api.pagination import ProxiedPagination
+from course_discovery.apps.course_metadata.models import Subject
 
 
 # pylint: disable=useless-super-delegation
@@ -21,7 +22,7 @@ class SubjectViewSet(viewsets.ReadOnlyModelViewSet):
     pagination_class = ProxiedPagination
 
     def get_queryset(self):
-        return serializers.SubjectSerializer.prefetch_queryset()
+        return Subject.objects.language(self.request.headers['Accept-Language']).all()
 
     def list(self, request, *args, **kwargs):
         """ Retrieve a list of all subjects. """
