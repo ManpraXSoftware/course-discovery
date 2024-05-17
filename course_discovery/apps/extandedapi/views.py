@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from course_discovery.apps.course_metadata.models import Program, Course, CourseRun, SubjectTranslation, Organization, Subject
 from course_discovery.apps.api.v1.views.search import CourseSearchViewSet, AggregateSearchViewSet
-from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
+from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery,MultiLingualDiscoveryTranslation
 from rest_framework import status
 from collections import OrderedDict
 from itertools import chain
@@ -388,14 +388,16 @@ class GetCoursePrograms(APIView):
 class GetTag(APIView):
     permission_classes = (AllowAny,)
     def get(self,request):
-        # import pdb;pdb.set_trace()
         language = request.GET.get('language')
         tagname = request.GET.get('topicname')
-        
-        # converted_tag = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Tag')).active_translations(title=tagname)
         result = list()
-        # if converted_tag[0].title:
-        #     result.append(converted_tag[0].title)
+        try:
+            tag_id = MultiLingualDiscoveryTranslation.objects.filter(title=tagname).last().master.id
+            converted_tag = MultiLingualDiscovery.objects.language('en').filter(Q(content_type='Tag')).active_translations(id=tag_id)
+        except:
+            converted_tag = MultiLingualDiscovery.objects.language('en').filter(Q(content_type='Tag')).active_translations(title=tagname)
+        if converted_tag and converted_tag[0].title:
+            result.append(converted_tag[0].title)
         result.append(tagname)
         
         return Response(result,status=status.HTTP_200_OK)
