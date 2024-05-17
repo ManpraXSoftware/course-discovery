@@ -68,6 +68,8 @@ class GetProgramTopics(APIView):
         try:
             accept_language = request.headers['Accept-Language']
             if not accept_language or accept_language=='en':
+                for i in range(len(es_response['facets']['tags']['terms'])):
+                    es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
                 return Response(es_response['facets']['tags'])
         except KeyError:
             return Response(es_response['facets']['tags'])
