@@ -93,7 +93,8 @@ class GetProgramTopics(APIView):
             if es_response['facets']['tags']['terms'][i]['term'] in data:
                 es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
                 es_response['facets']['tags']['terms'][i]['term'] = data[es_response['facets']['tags']['terms'][i]['term']]
-
+            else:
+                es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
             # else:
             #     es_response['facets']['tags']['terms'][i]['term'] = es_response['facets']['tags']['terms'][i]['term']
 
