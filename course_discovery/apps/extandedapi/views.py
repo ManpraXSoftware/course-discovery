@@ -480,7 +480,7 @@ class GetProgramTags2(APIView):
         if prog_uuids:
             for prog_id in prog_uuids.split(','):
                 try:
-                    program = Program.objects.get(uuid=prog_id, program_language=accept_language)
+                    program = Program.objects.get(uuid=prog_id)
                     log.info("Enrolled Program: {}".format(program.title))
                     converted_program = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Program')).active_translations(title=program.title)
                     response = {
