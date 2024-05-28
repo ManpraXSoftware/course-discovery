@@ -398,7 +398,7 @@ class GetTag(APIView):
         result = list()
         try:
             tag_id = MultiLingualDiscoveryTranslation.objects.filter(title=tagname).last().master.id
-            converted_tag = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Tag')).active_translations(id=tag_id)
+            converted_tag = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Tag', id=tag_id))
         except:
             converted_tag = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Tag')).active_translations(title=tagname)
         if converted_tag and converted_tag[0].title:
