@@ -226,18 +226,7 @@ class ProgramAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         try:
-            initial_courses = form.initial['courses']
-            cleaned_courses = form.cleaned_data['courses']
-            newly_added = [course.canonical_course_run.key for course in cleaned_courses if (course not in initial_courses) and course.canonical_course_run]
             super().save_model(request, obj, form, change)
-            if newly_added:
-                url = settings.LMS_URL_ROOT+"/mx-user-info/create_notification/"
-                request_data = {
-                    "program_title":obj.title,
-                    "program_uuid":obj.uuid,
-                    "courses":newly_added
-                }
-                requested_data= requests.post(url, data=request_data)
         except (MarketingSitePublisherException, MarketingSiteAPIClientException):
             self.save_error = True
 
