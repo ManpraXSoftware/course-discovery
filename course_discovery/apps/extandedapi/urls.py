@@ -16,5 +16,6 @@ urlpatterns = [
     url(r'^getcoursereports/$',GetCourseReportsData.as_view(),name='getcoursereports'),
     url(r'^getreportsfilters/$',GetReportsFilterData.as_view(),name='getreportsfilters'),
     url(r'^getprogramdetails/$', GetProgramDetails.as_view(), name="getprogramdetails"),
-    url(r'^getprogramtags2/$', GetProgramTags2.as_view(), name='getprogramtags2')
+    url(r'^getprogramtags2/$', GetProgramTags2.as_view(), name='getprogramtags2'),
+    url(r'^get-program-topics2/$', GetProgramTopics2.as_view(), name='get_program_topics2'),
 ]

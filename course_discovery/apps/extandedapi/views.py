@@ -68,14 +68,12 @@ class GetProgramTopics(APIView):
         try:
             accept_language = request.headers['Accept-Language']
             if not accept_language or accept_language=='en':
-                for i in range(len(es_response['facets']['tags']['terms'])):
-                    es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
                 return Response(es_response['facets']['tags'])
         except KeyError:
             return Response(es_response['facets']['tags'])
 
         
-
+        
         tag = MultiLingualDiscovery.objects.language('en').filter(Q(content_type='Tag')).active_translations(title__in=[i['term'] for i in es_response['facets']['tags']['terms']])
 
         converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title__in=[i.title for i in tag])
@@ -85,22 +83,19 @@ class GetProgramTopics(APIView):
         # import pdb;pdb.set_trace()
         data = {}
         for j in range(len(converted_tag)):
-            data[tag[j].title] = converted_tag[j].title
-            # if tag[j].title != converted_tag[j].title:
-            #     data[tag[j].title] = converted_tag[j].title
-            # else:
-            #     data[tag[j].title] = ''
+            if tag[j].title != converted_tag[j].title:
+                data[tag[j].title] = converted_tag[j].title
+            else:
+                data[tag[j].title] = ''
         
         for i in range(len(es_response['facets']['tags']['terms'])):
-            if es_response['facets']['tags']['terms'][i]['term'] in data:
-                es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
-                es_response['facets']['tags']['terms'][i]['term'] = data[es_response['facets']['tags']['terms'][i]['term']]
-            else:
-                es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
-            # else:
-            #     es_response['facets']['tags']['terms'][i]['term'] = es_response['facets']['tags']['terms'][i]['term']
 
-    
+            if es_response['facets']['tags']['terms'][i]['term'] in data:
+                 es_response['facets']['tags']['terms'][i]['converted_term'] = data[es_response['facets']['tags']['terms'][i]['term']]
+            else:
+                es_response['facets']['tags']['terms'][i]['converted_term'] = ''
+
+
         return Response(es_response['facets']['tags'])
 
 class CustomSearch(APIView):
@@ -530,3 +525,89 @@ class GetProgramTags2(APIView):
                         }
         # import pdb;pdb.set_trace()
         return Response(tags,status=status.HTTP_200_OK)
+    
+    
+class GetProgramTopics2(APIView):
+    """ GET Program Based Topics View."""
+    permission_classes = (IsAuthenticated,)
+    
+    def get(self, request):
+        subject_name_param = request.GET.get('subject_name')
+        sub = SubjectTranslation.objects.filter(name=subject_name_param)
+
+        try:
+            sub_id = sub[0].master.id
+            sub_en = Subject.objects.language('en').get(id=sub_id)
+            sub_name = sub_en.name
+            
+        except Exception as e:
+            sub_name = subject_name_param
+        
+        # import pdb;pdb.set_trace()
+        body = {
+            "query": {"bool": {
+                "must": [
+                        { "match": {
+                            "content_type": "program"
+                            }
+                        },
+                        {"match": {
+                            "program_subjects": sub_name
+                            }
+                        }
+                        ]
+                    }
+                },
+            "facets" : {
+                "tags" : { "terms" : {"field" : "program_topics_exact"} }
+                }
+            }
+        alias = settings.HAYSTACK_CONNECTIONS['default']['INDEX_NAME']
+        
+        # index = '{alias}_20160621_000000'.format(alias=alias)
+
+        host = settings.HAYSTACK_CONNECTIONS['default']['URL']
+        
+        connection = Elasticsearch(host)
+        index_value = connection.indices.get_alias(name=alias)
+        es_response = connection.search(index=[i for i in index_value.keys()][0], body=body)
+
+        
+
+        try:
+            accept_language = request.headers['Accept-Language']
+            if not accept_language or accept_language=='en':
+                for i in range(len(es_response['facets']['tags']['terms'])):
+                    es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
+                return Response(es_response['facets']['tags'])
+        except KeyError:
+            return Response(es_response['facets']['tags'])
+
+        
+
+        tag = MultiLingualDiscovery.objects.language('en').filter(Q(content_type='Tag')).active_translations(title__in=[i['term'] for i in es_response['facets']['tags']['terms']])
+
+        converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title__in=[i.title for i in tag])
+
+
+        # data = tag.__dict__
+        # import pdb;pdb.set_trace()
+        data = {}
+        for j in range(len(converted_tag)):
+            data[tag[j].title] = converted_tag[j].title
+            # if tag[j].title != converted_tag[j].title:
+            #     data[tag[j].title] = converted_tag[j].title
+            # else:
+            #     data[tag[j].title] = ''
+        
+        for i in range(len(es_response['facets']['tags']['terms'])):
+            if es_response['facets']['tags']['terms'][i]['term'] in data:
+                es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
+                es_response['facets']['tags']['terms'][i]['term'] = data[es_response['facets']['tags']['terms'][i]['term']]
+            else:
+                es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
+            # else:
+            #     es_response['facets']['tags']['terms'][i]['term'] = es_response['facets']['tags']['terms'][i]['term']
+
+    
+        return Response(es_response['facets']['tags'])
