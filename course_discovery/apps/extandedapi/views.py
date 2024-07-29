@@ -15,7 +15,7 @@ import logging as log
 from django.db.models import Q
 import json
 import pymongo
-from .serialializers import GetProgramCourseSerializer
+from .serialializers import GetProgramCourseSerializer,GetCourseProgramSerializer
 
 # pylint: disable=attribute-defined-outside-init
 class GetProgramTopics(APIView):
@@ -547,11 +547,11 @@ class GetProgramTopics2(APIView):
         body = {
             "query": {"bool": {
                 "must": [
-                        { "match": {
+                        { "term": {
                             "content_type": "program"
                             }
                         },
-                        {"match": {
+                        {"match_phrase": {
                             "program_subjects": sub_name
                             }
                         }
@@ -572,7 +572,6 @@ class GetProgramTopics2(APIView):
         index_value = connection.indices.get_alias(name=alias)
         es_response = connection.search(index=[i for i in index_value.keys()][0], body=body)
 
-        
 
         try:
             accept_language = request.headers['Accept-Language']
@@ -611,3 +610,14 @@ class GetProgramTopics2(APIView):
 
     
         return Response(es_response['facets']['tags'])
+    
+    
+class GetCouseProgramDetail(APIView):
+    permission_classes = (AllowAny,)
+    
+    def get(self, request):
+        course_id = self.request.query_params.get("course_id", None)
+        course_key = course_id.replace(" ", "+")
+        programs = Program.objects.filter(courses__canonical_course_run__key=course_key)
+        serializer = GetCourseProgramSerializer(programs, many=True)
+        return Response({"data":serializer.data}, status=status.HTTP_200_OK)

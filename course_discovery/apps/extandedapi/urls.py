@@ -18,4 +18,5 @@ urlpatterns = [
     url(r'^getprogramdetails/$', GetProgramDetails.as_view(), name="getprogramdetails"),
     url(r'^getprogramtags2/$', GetProgramTags2.as_view(), name='getprogramtags2'),
     url(r'^get-program-topics2/$', GetProgramTopics2.as_view(), name='get_program_topics2'),
+    url(r'^getcourseprogramdetail/$', GetCouseProgramDetail.as_view(), name="getcourseprogramdetail"),
 ]
