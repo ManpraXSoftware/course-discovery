@@ -547,11 +547,11 @@ class GetProgramTopics2(APIView):
         body = {
             "query": {"bool": {
                 "must": [
-                        { "term": {
+                        { "match": {
                             "content_type": "program"
                             }
                         },
-                        {"match_phrase": {
+                        {"match": {
                             "program_subjects": sub_name
                             }
                         }
