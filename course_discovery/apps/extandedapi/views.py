@@ -534,57 +534,77 @@ class GetProgramTopics2(APIView):
     def get(self, request):
         subject_name_param = request.GET.get('subject_name')
         sub = SubjectTranslation.objects.filter(name=subject_name_param)
-
+        res = {"total":0, "terms":[]}
         try:
-            sub_id = sub[0].master.id
-            sub_en = Subject.objects.language('en').get(id=sub_id)
-            sub_name = sub_en.name
+            if sub:
+                sub_id = sub[0].master.id
+                sub_en = Subject.objects.language('en').get(id=sub_id)
+                sub_name = sub_en.name
+            else:
+                return Response(res)
             
         except Exception as e:
-            sub_name = subject_name_param
+            sub_name = subject_name_param        
+        # body = {
+        #     "query": {"bool": {
+        #         "must": [
+        #                 { "match": {
+        #                     "content_type": "program"
+        #                     }
+        #                 },
+        #                 {"match_phrase": {
+        #                     "program_subjects": {
+        #                         "query": sub_name,
+        #                         "operator": "and",
+        #                         },
+        #                     }
+        #                 },
+        #                 ]
+        #             }
+        #         },
+            
+        #     "facets" : {
+        #         "tags" : { "terms" : {"field" : "program_topics_exact"} }
+        #         }
+        #     }
         
-        # import pdb;pdb.set_trace()
-        body = {
-            "query": {"bool": {
-                "must": [
-                        { "match": {
-                            "content_type": "program"
-                            }
-                        },
-                        {"match": {
-                            "program_subjects": sub_name
-                            }
-                        }
-                        ]
-                    }
-                },
-            "facets" : {
-                "tags" : { "terms" : {"field" : "program_topics_exact"} }
-                }
-            }
-        alias = settings.HAYSTACK_CONNECTIONS['default']['INDEX_NAME']
+        # alias = settings.HAYSTACK_CONNECTIONS['default']['INDEX_NAME']
         
         # index = '{alias}_20160621_000000'.format(alias=alias)
 
-        host = settings.HAYSTACK_CONNECTIONS['default']['URL']
+        # host = settings.HAYSTACK_CONNECTIONS['default']['URL']
         
-        connection = Elasticsearch(host)
-        index_value = connection.indices.get_alias(name=alias)
-        es_response = connection.search(index=[i for i in index_value.keys()][0], body=body)
+        # connection = Elasticsearch(host)
+        # index_value = connection.indices.get_alias(name=alias)
+        # es_response = connection.search(index=[i for i in index_value.keys()][0], body=body)
+        # import pdb;pdb.set_trace()
+        # try:
+            # accept_language = request.headers['Accept-Language']
+        #     if not accept_language or accept_language=='en':
+        #         # for i in range(len(es_response['facets']['tags']['terms'])):
+        #         #     es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
+        #         return Response(res)
+        # except KeyError:
+        #     return Response(res)
 
-
+        for program in sub_en.program_set.all():
+            for topic in program.program_topics.all(): 
+                term = {
+                "original_term": topic.name,
+                "count": 1,
+                "term": topic.name
+            }
+                if term not in res['terms']:
+                    res['terms'].append(term)
+                    res['total'] = res['total']+1
         try:
             accept_language = request.headers['Accept-Language']
             if not accept_language or accept_language=='en':
-                for i in range(len(es_response['facets']['tags']['terms'])):
-                    es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
-                return Response(es_response['facets']['tags'])
+                return Response(res)
         except KeyError:
-            return Response(es_response['facets']['tags'])
+            return Response(res)
 
-        
-
-        tag = MultiLingualDiscovery.objects.language('en').filter(Q(content_type='Tag')).active_translations(title__in=[i['term'] for i in es_response['facets']['tags']['terms']])
+        tag = MultiLingualDiscovery.objects.language('en').filter(Q(content_type='Tag')).active_translations(title__in=[i['term'] for i in res['terms']])
 
         converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title__in=[i.title for i in tag])
 
@@ -598,18 +618,23 @@ class GetProgramTopics2(APIView):
             #     data[tag[j].title] = converted_tag[j].title
             # else:
             #     data[tag[j].title] = ''
-        
-        for i in range(len(es_response['facets']['tags']['terms'])):
-            if es_response['facets']['tags']['terms'][i]['term'] in data:
-                es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
-                es_response['facets']['tags']['terms'][i]['term'] = data[es_response['facets']['tags']['terms'][i]['term']]
-            else:
-                es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
+        # import pdb;pdb.set_trace()
+        # for i in range(len(es_response['facets']['tags']['terms'])):
+        #     if es_response['facets']['tags']['terms'][i]['term'] in data:
+        #         es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
+        #         es_response['facets']['tags']['terms'][i]['term'] = data[es_response['facets']['tags']['terms'][i]['term']]
+        #     else:
+        #         es_response['facets']['tags']['terms'][i]['original_term'] = es_response['facets']['tags']['terms'][i]['term']
             # else:
             #     es_response['facets']['tags']['terms'][i]['term'] = es_response['facets']['tags']['terms'][i]['term']
-
+        for i in range(len(res['terms'])):
+            if res['terms'][i]['term'] in data:
+                res['terms'][i]['original_term'] = res['terms'][i]['term']
+                res['terms'][i]['term'] = data[res['terms'][i]['term']]
+            else:
+                res['terms'][i]['original_term'] = res['terms'][i]['term']
     
-        return Response(es_response['facets']['tags'])
+        return Response(res)
     
     
 class GetCouseProgramDetail(APIView):
