@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-F3w7mX95PdgyTmZZMECAngseQB83DfGTowi0iMjiWaeVhAn4FJkqJByhZMI3AhiU" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-/bQdsTh/da6pkI1MST/rWKFNjaCP5gBSY4sEBT38Q/9RBh9AH40zEOg7Hlq2THRZ"
+    crossorigin="anonymous"></script>
+  <title>Discovery Commands | Subodha</title>
+</head>
+{% if course_meta_command_state %}
+<style>
+  a.disabled_course_sync {
+    pointer-events: none;
+    color: black;
+    background-color: #ccc;
+    border-color: #ccc;
+  }
+</style>
+{% endif %}
+
+{% if update_index_command_state %}
+<style>
+  a.disabled_update_index {
+    pointer-events: none;
+    color: black;
+    background-color: #ccc;
+    border-color: #ccc;
+  }
+</style>
+{% endif %}
+
+<body>
+  <div class="row container-fluid">
+    <h3 class="text-center">Discovery Commands</h3>
+    <div class="col">
+      <div class="card">
+        <div class="card-header">
+          Course Sync
+        </div>
+        <div class="card-body">
+          <h5 class="card-title">Last Run Time</h5>
+          <p class="card-text">{{ course_meta_timestamp }}</p>
+          {% if not course_meta_command_state %}
+          <p><b>Status:</b> Last run was successfull. You can run the command.</p>
+          {% else %}
+          <p><b>Status:</b> Command is running, please wait and refresh page to see status.</p>
+          {% endif %}
+          <a href="{% url 'course_sync' %}" class="btn btn-primary disabled_course_sync">Run Course Sync</a>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <div class="card-header">
+          Update Index
+        </div>
+        <div class="card-body">
+          <h5 class="card-title">Last Run Time</h5>
+          <p class="card-text">{{ update_index_timestamp }}</p>
+          {% if not update_index_command_state %}
+          <p><b>Status:</b> Last run was successfull. You can run the command.</p>
+          {% else %}
+          <p><b>Status:</b> Command is running, please wait and refresh page to see status.</p>
+          {% endif %}
+          <a href="{% url 'update_indexCmd' %}" class="btn btn-primary disabled_update_index">Run Update Index</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>

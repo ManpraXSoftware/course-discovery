@@ -93,7 +93,7 @@ docs/_build/
 node_modules/
 course_discovery/static/bundles/
 webpack-stats.json
-
+migrations/
 # Visual Studio Code
 .vscode
 

@@ -62,17 +62,6 @@ DEFAULT_PARTNER_ID = 1
 COMPRESS_OFFLINE = False
 COMPRESS_ENABLED = False
 
-PARLER_LANGUAGES = {
-    1: (
-        {'code': LANGUAGE_CODE, },
-        {'code': 'es', },
-    ),
-    'default': {
-         'fallbacks': [PARLER_DEFAULT_LANGUAGE_CODE],
-         'hide_untranslated': False,
-     }
-}
-
 SOCIAL_AUTH_EDX_OAUTH2_ISSUER = "http://localhost:18000"
 SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT = "http://edx.devstack.lms:18000"
 SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT = "http://localhost:18000"

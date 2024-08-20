@@ -31,6 +31,7 @@ from course_discovery.apps.course_metadata.views import (
     CourseSkillsView, RefreshCourseSkillsView, RefreshProgramSkillsView
 )
 from course_discovery.apps.learner_pathway.api.urls import app_name as learner_pathway_app_name
+from django.utils.safestring import mark_safe
 
 PUBLICATION_FAILURE_MSG_TPL = _(
     'An error occurred while publishing the {model} to the marketing site. '
@@ -363,7 +364,7 @@ class ProgramLocationRestrictionAdmin(admin.ModelAdmin):
 class ProgramAdmin(DjangoObjectActions, SimpleHistoryAdmin):
     form = ProgramAdminForm
     list_display = ('id', 'uuid', 'title', 'type', 'partner', 'status', 'hidden')
-    list_filter = ('partner', 'type', 'product_source', 'status', ProgramEligibilityFilter, 'hidden')
+    list_filter = ('partner', 'type', 'status', ProgramEligibilityFilter, 'hidden')
     ordering = ('uuid', 'title', 'status')
     readonly_fields = (
         'uuid', 'custom_course_runs_display', 'excluded_course_runs', 'enrollment_count', 'recent_enrollment_count',
@@ -375,17 +376,14 @@ class ProgramAdmin(DjangoObjectActions, SimpleHistoryAdmin):
 
     # ordering the field display on admin page.
     fields = (
-        'uuid', 'title', 'subtitle', 'marketing_hook', 'product_source', 'type', 'status', 'partner', 'banner_image',
-        'banner_image_url', 'card_image', 'marketing_slug', 'overview', 'credit_redemption_overview', 'video',
+        'uuid', 'title', 'subtitle', 'marketing_hook', 'type', 'status', 'partner', 'banner_image',
+        'banner_image_url', 'card_image', 'marketing_slug','program_language', 'overview', 'credit_redemption_overview', 'video',
         'total_hours_of_effort', 'weeks_to_complete', 'min_hours_effort_per_week', 'max_hours_effort_per_week',
         'courses', 'order_courses_by_start_date', 'custom_course_runs_display', 'excluded_course_runs',
         'authoring_organizations', 'credit_backing_organizations', 'one_click_purchase_enabled', 'hidden',
         'corporate_endorsements', 'faq', 'individual_endorsements', 'job_outlook_items', 'expected_learning_items',
         'instructor_ordering', 'enrollment_count', 'recent_enrollment_count', 'credit_value',
-        'organization_short_code_override', 'organization_logo_override', 'primary_subject_override',
-        'level_type_override', 'language_override', 'enterprise_subscription_inclusion', 'in_year_value', 'labels',
-        'geolocation', 'program_duration_override', 'has_ofac_restrictions', 'ofac_comment', 'data_modified_timestamp',
-        'excluded_from_search', 'excluded_from_seo'
+        'program_topics','program_subjects'
     )
     change_actions = ('refresh_program_skills', )
 
@@ -396,9 +394,9 @@ class ProgramAdmin(DjangoObjectActions, SimpleHistoryAdmin):
         Make product_source field readonly if program obj is already created. In case a product without product_source
         is present, a superuser should be able to edit the product_source.
         """
-        if (not obj) or (not obj.product_source and request.user.is_superuser):
+        if (not obj) or (request.user.is_superuser):
             return self.readonly_fields
-        return self.readonly_fields + ('product_source',)
+        return self.readonly_fields
 
     def get_urls(self):
         """
@@ -427,7 +425,18 @@ class ProgramAdmin(DjangoObjectActions, SimpleHistoryAdmin):
         description=_('Included course runs')
     )
     def custom_course_runs_display(self, obj):
-        return format_html('<br>'.join([str(run) for run in obj.course_runs]))
+        excluded_course_run_ids = [course_run.id for course_run in obj.excluded_course_runs.all()]
+        runs = []
+        for course in obj.courses.all().order_by("course_runs__start"):
+            for run in course.course_runs.all():
+                if run.id not in excluded_course_run_ids:
+                    runs.append(run)
+        if obj.order_courses_by_start_date:
+            return mark_safe('<br>'.join([str(run) for run in runs])) 
+            
+        return mark_safe('<br>'.join([str(run) for run in obj.course_runs]))
+
+    custom_course_runs_display.short_description = _('Included course runs')
 
     def _redirect_course_run_update_page(self, obj):
         """ Returns a response redirect to a page where the user can update the
@@ -462,8 +471,8 @@ class ProgramAdmin(DjangoObjectActions, SimpleHistoryAdmin):
 
     def save_model(self, request, obj, form, change):
         try:
-            if obj.product_source and obj.product_source.ofac_restricted_program_types.filter(id=obj.type.id).exists():
-                obj.mark_ofac_restricted()
+            # if obj.product_source and obj.product_source.ofac_restricted_program_types.filter(id=obj.type.id).exists():
+            #     obj.mark_ofac_restricted()
             super().save_model(request, obj, form, change)
         except (MarketingSitePublisherException, MarketingSiteAPIClientException):
             self.save_error = True

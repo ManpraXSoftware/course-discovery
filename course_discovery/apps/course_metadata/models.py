@@ -68,7 +68,7 @@ from course_discovery.apps.ietf_language_tags.utils import serialize_language
 from course_discovery.apps.publisher.utils import VALID_CHARS_IN_COURSE_NUM_AND_ORG_KEY
 
 logger = logging.getLogger(__name__)
-
+ALL_LANGUAGES = getattr(settings, 'LANGUAGES', None)
 
 class ManageHistoryMixin(models.Model):
     """
@@ -3162,7 +3162,11 @@ class Program(ManageHistoryMixin, PkSearchableMixin, TimeStampedModel):
     # NOTE (CCB): Editors of this field should validate the values to ensure only CourseRuns associated
     # with related Courses are stored.
     excluded_course_runs = models.ManyToManyField(CourseRun, blank=True)
-    product_source = models.ForeignKey(Source, models.SET_NULL, null=True, blank=True, related_name='programs')
+    program_language = models.CharField(
+        help_text=_('The Language of this Program.'),choices=ALL_LANGUAGES, default=ALL_LANGUAGES[0][0], max_length=255
+        
+    )
+    # product_source = models.ForeignKey(Source, models.SET_NULL, null=True, blank=True, related_name='programs')
     partner = models.ForeignKey(Partner, models.CASCADE, null=True, blank=False)
     overview = models.TextField(null=True, blank=True)
     total_hours_of_effort = models.PositiveSmallIntegerField(
@@ -3307,7 +3311,7 @@ class Program(ManageHistoryMixin, PkSearchableMixin, TimeStampedModel):
         blank=True,
         null=True)
     # nosemgrep
-    labels = TaggableManager(
+    program_topics = TaggableManager(
         blank=True,
         related_name='program_tags',
         help_text=_('Pick a tag/label from the suggestions. To make a new tag, add a comma after the tag name.'),
@@ -3323,7 +3327,8 @@ class Program(ManageHistoryMixin, PkSearchableMixin, TimeStampedModel):
     data_modified_timestamp = models.DateTimeField(
         default=None, blank=True, null=True, help_text=_('The last time this program was modified.')
     )
-
+    program_subjects = SortedManyToManyField(Subject, blank=True, related_name="program_subjects")
+    
     field_tracker = FieldTracker()
 
     @property
