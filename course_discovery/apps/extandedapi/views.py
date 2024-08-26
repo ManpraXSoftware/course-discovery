@@ -276,7 +276,8 @@ class GetProgramCoursesDetail(APIView):
                 else:
                     log.info("_________ course {} neither having card_image_url nor canonical_course_run".format(course))
                     continue
-            
+            filter_data = filter(lambda data : data.get("language") in ["en", language],result['data'])
+            result['data']=filter_data
             return Response(result,status=status.HTTP_200_OK)
         except Exception as e:
             log.info("error in getting course of program is {}".format(e))
