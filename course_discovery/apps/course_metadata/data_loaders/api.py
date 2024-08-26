@@ -230,10 +230,11 @@ class CoursesApiDataLoader(AbstractDataLoader):
 
     def format_course_run_data(self, body, course=None):
         all_languages = dict(settings.LANGUAGES)
-        try:
-            course_language = LanguageTag.objects.get(code=body['language'])
-        except:
-            course_language = LanguageTag.objects.create(name=all_languages.get(body['language']),code=body['language'])
+        if body.get("language", None):
+            try:
+                course_language = LanguageTag.objects.get(code=body['language'])
+            except:
+                course_language = LanguageTag.objects.create(name=all_languages.get(body['language']),code=body['language'])
             
         defaults = {
             'key': body['id'],
@@ -245,7 +246,7 @@ class CoursesApiDataLoader(AbstractDataLoader):
             'license': body.get('license') or '',  # license cannot be None
             'title_override': body['name'],  # we support Studio edits, even though Publisher also owns titles
             'pacing_type': self.get_pacing_type(body),
-            "language":course_language
+            "language":course_language if body.get("language", None) else None
         }
 
         if not self.partner.uses_publisher:
