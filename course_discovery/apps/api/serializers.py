@@ -779,7 +779,7 @@ class MinimalCourseRunSerializer(DynamicFieldsMixin, TimestampModelSerializer):
         model = CourseRun
         fields = ('key', 'uuid', 'title', 'converted_course_title', 'external_key', 'image', 'short_description', 'marketing_url',
                   'seats', 'start', 'end', 'go_live_date', 'enrollment_start', 'enrollment_end',
-                  'pacing_type', 'type', 'run_type', 'status', 'is_enrollable', 'is_marketable', 'term',)
+                  'pacing_type', 'type', 'run_type', 'status', 'is_enrollable', 'is_marketable', 'term',"language")
 
     def get_marketing_url(self, obj):
         

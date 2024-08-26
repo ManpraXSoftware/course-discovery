@@ -257,6 +257,7 @@ class GetProgramCoursesDetail(APIView):
                     # converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=course.canonical_course_run).language(language).first()
                     converted_title = MultiLingualDiscovery.objects.filter(content_type='course', course_title__key=course.canonical_course_run.key).language(language).first()
                     data['converted_title'] = converted_title.title if converted_title else ''
+                    data['language'] = course.canonical_course_run.language.code
                     result["data"].append(data)
                 elif course.card_image_url:
                     courseKey = str('course')+course.card_image_url.split('asset')[1].split('type')[0][0:-1]
