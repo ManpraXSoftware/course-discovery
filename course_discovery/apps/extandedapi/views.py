@@ -260,14 +260,14 @@ class GetProgramCoursesDetail(APIView):
                     try:
                         data['language'] = course.canonical_course_run.language.code
                     except:
-                        data['language'] = None
+                        data['language'] = "en"
                     result["data"].append(data)
                 elif course.card_image_url:
                     courseKey = str('course')+course.card_image_url.split('asset')[1].split('type')[0][0:-1]
                     log.info("_________ course {} having card_image_url it's key is {}".format(course,courseKey))
                     data['key'] = courseKey
                     data['title'] = course.title
-                    data['language'] = None
+                    data['language'] = "en"
                     # converted_title = MultiLingualDiscovery.objects.filter(content_type='course',course_title=CourseRun.objects.filter(key=courseKey).first()).language(language).first()
                     converted_title = MultiLingualDiscovery.objects.filter(content_type='course', course_title__key=courseKey).language(language).first()
                     data['converted_title'] = converted_title.title if converted_title else ''
