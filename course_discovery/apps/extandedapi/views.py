@@ -493,6 +493,7 @@ class GetProgramTags2(APIView):
                         "program_uuid":prog_id,
                         "program_title":program.title,
                         "converted_program_title":converted_program[0].title if converted_program.count() else program.title,
+                        "program_language": program.program_language,
                         "tags":[]
                     }
                     log.info("---------program response--{}".format(response))
@@ -521,7 +522,7 @@ class GetProgramTags2(APIView):
                 log.info("Resume course programs: {}".format(resume_course_programs))
                 resume_prog_uuid = [str(prog.uuid) for prog in resume_course_programs]
                 for prog in tags:
-                    if prog['program_uuid'] in resume_prog_uuid:
+                    if prog['program_uuid'] in resume_prog_uuid and course.canonical_course_run[0].language in ['en', accept_language]:
                         converted_course_name = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Course')).active_translations(title=course.title)
                         prog['resume_program'] = {
                             "course_id": resume_data[0],
