@@ -522,14 +522,14 @@ class GetProgramTags2(APIView):
                 log.info("Resume course programs: {}".format(resume_course_programs))
                 resume_prog_uuid = [str(prog.uuid) for prog in resume_course_programs]
                 for prog in tags:
-                    if prog['program_uuid'] in resume_prog_uuid and course.canonical_course_run[0].language in ['en', accept_language]:
+                    if prog['program_uuid'] in resume_prog_uuid and course.canonical_course_run.language.code in ['en', accept_language]:
                         converted_course_name = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Course')).active_translations(title=course.title)
                         prog['resume_program'] = {
                             "course_id": resume_data[0],
                             "course_name": course.title,
                             "converted_course_name":converted_course_name[0].title if converted_course_name.count() else course.title,
                             "block_id": resume_data[-1],
-                            "course_language":course.canonical_course_run[0].langauge
+                            "course_language":course.canonical_course_run.langauge.code
                         }
         # import pdb;pdb.set_trace()
         return Response(tags,status=status.HTTP_200_OK)
