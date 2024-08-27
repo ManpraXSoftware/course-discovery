@@ -3,6 +3,7 @@ from course_discovery.apps.course_metadata.models import Course, Program
 
 class GetProgramCourseSerializer(serializers.ModelSerializer):
     course_id = serializers.SerializerMethodField()
+    language = serializers.SerializerMethodField()
 
     def get_course_id(self, obj):
         if obj.canonical_course_run:
@@ -11,10 +12,16 @@ class GetProgramCourseSerializer(serializers.ModelSerializer):
             return 'course-v1'+obj.card_image_url.split("type")[0].split("asset-v1")[1][0:-1]
         else:
             return ''
+        
+    def get_language(self,obj):
+        try:
+            return obj.canonical_course_run.language.code
+        except:
+            return "en"
 
     class Meta:
         model = Course
-        fields = ('canonical_course_run', 'course_id')
+        fields = ('canonical_course_run', 'course_id', "language")
         
 class GetCourseProgramSerializer(serializers.ModelSerializer):
     subjects = serializers.SerializerMethodField()
