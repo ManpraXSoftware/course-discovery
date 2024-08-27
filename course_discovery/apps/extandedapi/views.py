@@ -529,6 +529,7 @@ class GetProgramTags2(APIView):
                             "course_name": course.title,
                             "converted_course_name":converted_course_name[0].title if converted_course_name.count() else course.title,
                             "block_id": resume_data[-1],
+                            "course_language":course.canonical_course_run[0].langauge
                         }
         # import pdb;pdb.set_trace()
         return Response(tags,status=status.HTTP_200_OK)
