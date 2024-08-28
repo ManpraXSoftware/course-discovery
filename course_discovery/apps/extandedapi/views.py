@@ -278,7 +278,7 @@ class GetProgramCoursesDetail(APIView):
                 else:
                     log.info("_________ course {} neither having card_image_url nor canonical_course_run".format(course))
                     continue
-            filter_data = filter(lambda data : data.get("language") in ["en", language],result['data'])
+            filter_data = filter(lambda data :( data.get("language")=="en" or data.get("language")==language),result['data'])
             result['data']=filter_data
             return Response(result,status=status.HTTP_200_OK)
         except Exception as e:
@@ -523,8 +523,12 @@ class GetProgramTags2(APIView):
                 resume_course_programs = filter(lambda x:str(x.uuid) in prog_uuids.split(','), programs)
                 log.info("Resume course programs: {}".format(resume_course_programs))
                 resume_prog_uuid = [str(prog.uuid) for prog in resume_course_programs]
+                course_lang = "en"
+                if course.canonical_course_run and course.canonical_course_run.language:
+                    course_lang = course.canonical_course_run.language.code
                 for prog in tags:
-                    if prog['program_uuid'] in resume_prog_uuid and (course.canonical_course_run.language.code =='en' or course.canonical_course_run.language.code == accept_language):
+                    if prog['program_uuid'] in resume_prog_uuid and ( course_lang =='en' or course_lang == accept_language):
+                        
                         converted_course_name = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Course')).active_translations(title=course.title)
                         prog['resume_program'] = {
                             "course_id": resume_data[0],
