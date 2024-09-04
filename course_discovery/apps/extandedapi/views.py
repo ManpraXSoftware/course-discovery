@@ -15,6 +15,7 @@ import logging as log
 from django.db.models import Q
 import json
 import pymongo
+from datetime import datetime
 from .serialializers import GetProgramCourseSerializer,GetCourseProgramSerializer
 
 # pylint: disable=attribute-defined-outside-init
@@ -251,6 +252,7 @@ class GetProgramCoursesDetail(APIView):
             language = request.GET['language'] if 'language' in request.GET else 'en'
             for course in program.courses.all():
                 data = dict()
+                data["created"] = course.created
                 if course.canonical_course_run:
                     log.info("_________ course {} having canonical_course_run it's key is {}".format(course,course.canonical_course_run.key))
                     data['key'] = course.canonical_course_run.key
@@ -279,7 +281,8 @@ class GetProgramCoursesDetail(APIView):
                     log.info("_________ course {} neither having card_image_url nor canonical_course_run".format(course))
                     continue
             filter_data = filter(lambda data :( data.get("language")=="en" or data.get("language")==language),result['data'])
-            result['data']=filter_data
+            sorted_data = sorted(filter_data, key=lambda d: d['created'])
+            result['data'] = sorted_data
             return Response(result,status=status.HTTP_200_OK)
         except Exception as e:
             log.info("error in getting course of program is {}".format(e))
