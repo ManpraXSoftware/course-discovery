@@ -1002,7 +1002,7 @@ class MinimalCourseSerializer(DynamicFieldsMixin, TimestampModelSerializer):
     class Meta:
         model = Course
         fields = ('key', 'uuid', 'title', 'course_runs', 'entitlements', 'owners', 'image',
-                  'short_description', 'type', 'url_slug',)
+                  'short_description', 'type', 'url_slug',"created")
 
 
 class CourseEditorSerializer(serializers.ModelSerializer):
