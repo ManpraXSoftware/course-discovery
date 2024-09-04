@@ -4,6 +4,7 @@ from course_discovery.apps.course_metadata.models import Course, Program
 class GetProgramCourseSerializer(serializers.ModelSerializer):
     course_id = serializers.SerializerMethodField()
     language = serializers.SerializerMethodField()
+    start = serializers.SerializerMethodField()
 
     def get_course_id(self, obj):
         if obj.canonical_course_run:
@@ -14,14 +15,24 @@ class GetProgramCourseSerializer(serializers.ModelSerializer):
             return ''
         
     def get_language(self,obj):
+        lang = 'en'
         try:
-            return obj.canonical_course_run.language.code
+            lang = obj.canonical_course_run.language.code
         except:
-            return "en"
+            lang = "en"
+        if lang == '' or lang == None:
+            lang = "en"
+        return lang
+        
+    def get_start(self,obj):
+        try:
+            return obj.canonical_course_run.start
+        except:
+            return None
 
     class Meta:
         model = Course
-        fields = ('canonical_course_run', 'course_id', "language")
+        fields = ('canonical_course_run', 'course_id', "language", 'start')
         
 class GetCourseProgramSerializer(serializers.ModelSerializer):
     subjects = serializers.SerializerMethodField()
