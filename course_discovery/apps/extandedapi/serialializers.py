@@ -32,7 +32,7 @@ class GetProgramCourseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ('canonical_course_run', 'course_id', "language", 'start')
+        fields = ('canonical_course_run', 'course_id', "language", 'start', 'created')
         
 class GetCourseProgramSerializer(serializers.ModelSerializer):
     subjects = serializers.SerializerMethodField()
