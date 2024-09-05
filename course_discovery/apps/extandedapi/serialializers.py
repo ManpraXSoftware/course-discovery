@@ -54,5 +54,5 @@ class GetCourseProgramSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Program
-        fields = ("title","subjects", "topics")
+        fields = ("uuid","title","subjects", "topics")
         
