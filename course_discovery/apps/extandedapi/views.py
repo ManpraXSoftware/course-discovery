@@ -246,10 +246,21 @@ class GetProgramCoursesDetail(APIView):
             
             result = dict()
             result["id"] = request.GET['program_uuid']
+            result['title'] = program.title
             result["data"]= list()
             from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
             from course_discovery.apps.course_metadata.models import CourseRun
             language = request.GET['language'] if 'language' in request.GET else 'en'
+            converted_program_title = MultiLingualDiscovery.objects.filter(content_type='program', program_title=program).language(language).first()
+            result['converted_title'] = converted_program_title.title if converted_program_title !=None else program.title
+            result['language'] = program.program_language if program.program_language else 'en'
+            result['topic_title'] = program.program_topics.all()[0].name if program.program_topics.all() else '' 
+            converted_tag = result['topic_title']
+            converted_topic_title = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Tag')).active_translations(title=result['topic_title'])
+            if converted_topic_title and converted_topic_title[0].title:
+                converted_tag = converted_topic_title[0].title
+            # import pdb;pdb.set_trace()
+            result['converted_topic_title'] = converted_tag
             for course in program.courses.all():
                 data = dict()
                 data["created"] = course.created
@@ -660,6 +671,7 @@ class GetCouseProgramDetail(APIView):
     def get(self, request):
         course_id = self.request.query_params.get("course_id", None)
         course_key = course_id.replace(" ", "+")
+        course_title = Course.objects.get(canonical_course_run__key=course_key).title
         programs = Program.objects.filter(courses__canonical_course_run__key=course_key)
         serializer = GetCourseProgramSerializer(programs, many=True)
-        return Response({"data":serializer.data}, status=status.HTTP_200_OK)
+        return Response({"data":serializer.data, "course_title":course_title}, status=status.HTTP_200_OK)
