@@ -163,6 +163,14 @@ class ProgramSearchViewSet(BaseHaystackViewSet):
         context = super().get_serializer_context()
         context.update({"request": self.request, "language":self.request.headers['Accept-Language']})
         return context
+    
+    def get_queryset(self):
+        program_seach_topic = self.request.query_params.get("program_topics", None)
+        queryset = super(ProgramSearchViewSet, self).get_queryset()
+        if program_seach_topic:
+            programs = [program.uuid for program in queryset if program_seach_topic in program.program_topics]
+            return queryset.filter(uuid__in=programs)
+        return queryset
         
 
 class AggregateSearchViewSet(BaseHaystackViewSet, CatalogDataViewSet):
