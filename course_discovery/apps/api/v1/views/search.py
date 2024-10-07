@@ -30,6 +30,7 @@ from course_discovery.apps.edx_elasticsearch_dsl_extensions.viewsets import (
     BaseElasticsearchDocumentViewSet, MultiDocumentsWrapper
 )
 from course_discovery.apps.learner_pathway.models import LearnerPathway
+from elasticsearch_dsl import Q
 
 
 class FacetQueryFieldsMixin:
@@ -101,6 +102,16 @@ class CourseSearchViewSet(BaseElasticsearchDocumentViewSet):
         'subjects': {'field': 'subjects.raw', 'enabled': True},
         'prerequisites': {'field': 'prerequisites', 'enabled': True},
     }
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search = self.request.query_params.get("search", None)
+        
+        if search:
+            wildcard_query = f"*{search.lower()}*"
+            query = Q("wildcard", title=wildcard_query)
+            queryset = queryset.query( Q("bool", must=[query]))
+        return queryset
 
 
 class CourseRunSearchViewSet(FacetQueryFieldsMixin, BaseElasticsearchDocumentViewSet):
@@ -149,6 +160,25 @@ class ProgramSearchViewSet(BaseElasticsearchDocumentViewSet):
         'status': {'field': 'status', 'enabled': True},
         'seat_types': {'field': 'seat_types', 'enabled': True},
     }
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"request": self.request, "language":self.request.headers['Accept-Language']})
+        return context
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        search = self.request.query_params.get("search", None)
+        program_topics = self.request.query_params.get("program_topics", None)
+        
+        if search:
+            wildcard_query = f"*{search.lower()}*"
+            query = Q("wildcard", title=wildcard_query)
+            queryset = queryset.query( Q("bool", must=[query]))
+        if program_topics:
+            query = Q("term", program_topics__raw=program_topics)
+            queryset = queryset.query(query)
+        return queryset
 
 
 class BaseAggregateSearchViewSet(FacetQueryFieldsMixin, BaseElasticsearchDocumentViewSet):
@@ -263,6 +293,7 @@ class BaseAggregateSearchViewSet(FacetQueryFieldsMixin, BaseElasticsearchDocumen
         },
         'subject_uuids': {'field': 'subject_uuids', 'lookups': [LOOKUP_FILTER_TERM, LOOKUP_FILTER_TERMS]},
         'type': {'field': 'type.lower', 'lookups': [LOOKUP_FILTER_TERM]},
+        'program_topics': {'field': 'program_topics', 'lookups': [LOOKUP_FILTER_TERM, LOOKUP_FILTER_TERMS]},
     }
     ordering_fields = {'start': 'start', 'aggregation_key': 'aggregation_key'}
 

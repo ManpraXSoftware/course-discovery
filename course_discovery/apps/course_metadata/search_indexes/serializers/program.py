@@ -12,6 +12,8 @@ from course_discovery.apps.edx_elasticsearch_dsl_extensions.serializers import B
 from ..constants import BASE_PROGRAM_FIELDS, BASE_SEARCH_INDEX_FIELDS, COMMON_IGNORED_FIELDS
 from ..documents import ProgramDocument
 from .common import DocumentDSLSerializerMixin
+from course_discovery.apps.course_metadata.models import Program
+from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
 
 __all__ = ('ProgramSearchDocumentSerializer',)
 
@@ -24,6 +26,16 @@ class ProgramSearchDocumentSerializer(DocumentSerializer):
     authoring_organizations = serializers.SerializerMethodField()
     skill_names = serializers.SerializerMethodField()
     skills = serializers.SerializerMethodField()
+    banner_image = serializers.SerializerMethodField()
+    program_topics = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
+    
+    def get_title(self, program):
+        try:
+            converted_title = MultiLingualDiscovery.objects.language(self.context.get("language", 'en')).filter(content_type='Program').active_translations(title=program.title).last()
+            return converted_title.title
+        except:
+            return program.title
 
     def get_authoring_organizations(self, program):
         organizations = program.authoring_organization_bodies
@@ -34,6 +46,13 @@ class ProgramSearchDocumentSerializer(DocumentSerializer):
 
     def get_skills(self, program):
         return get_whitelisted_serialized_skills(program.uuid, product_type=ProductTypes.Program)
+    
+    def get_banner_image(self, program):
+        return Program.objects.get(uuid=program.uuid).banner_image.url
+    
+    def get_program_topics(self, program):
+        tags = Program.objects.get(uuid=program.uuid).program_topics.all()
+        return [tag.name for tag in tags]
 
     class Meta:
         """
@@ -62,6 +81,10 @@ class ProgramSearchDocumentSerializer(DocumentSerializer):
                 'is_2u_degree_program',
                 'excluded_from_search',
                 'excluded_from_seo',
+                "banner_image",
+                'program_topics',
+                "program_language",
+                "courses"
             )
         )
 
@@ -78,7 +101,7 @@ class ProgramFacetSerializer(BaseDjangoESDSLFacetSerializer):
         """
 
         ignore_fields = COMMON_IGNORED_FIELDS
-        fields = BASE_PROGRAM_FIELDS + ('organizations',)
+        fields = BASE_PROGRAM_FIELDS + ('organizations','program_topics')
 
 
 class ProgramSearchModelSerializer(DocumentDSLSerializerMixin, ContentTypeSerializer, ProgramSerializer):

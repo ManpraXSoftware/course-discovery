@@ -2905,6 +2905,17 @@ class CourseRun(ManageHistoryMixin, DraftModelMixin, CachedMixin, TimeStampedMod
         return is_published and self.seats.exists() and bool(self.marketing_url)
 
     @property
+    def converted_course_title(self):
+        try:
+            from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
+            course_name = MultiLingualDiscovery.objects.filter(content_type='Course').active_translations(title=self.title)
+            
+
+            return course_name[0].title
+        except Exception as e:
+            return ""
+        
+    @property
     def is_active(self):
         """
         Returns True if the course run is active, meaning it is both enrollable, marketable and has not ended.

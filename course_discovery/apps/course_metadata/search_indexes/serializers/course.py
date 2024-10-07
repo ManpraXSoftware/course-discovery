@@ -183,7 +183,7 @@ class CourseSearchDocumentSerializer(ModelObjectDocumentSerializerMixin, DateTim
         Meta options.
         """
 
-        list_serializer_class = CourseSearchDocumentListSerializer
+        # list_serializer_class = CourseSearchDocumentListSerializer
         document = CourseDocument
         ignore_fields = COMMON_IGNORED_FIELDS
         fields = BASE_SEARCH_INDEX_FIELDS + (

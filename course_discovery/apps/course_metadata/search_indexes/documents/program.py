@@ -60,12 +60,11 @@ class ProgramDocument(BaseDocument, OrganizationsMixin):
         'description': fields.TextField(),
     })
     title = fields.TextField(
-        analyzer=synonym_text,
+        analyzer='standard',
         fields={
-            'suggest': fields.CompletionField(),
-            'edge_ngram_completion': fields.TextField(analyzer=edge_ngram_completion),
+            'raw': fields.KeywordField(),
         },
-    )
+        multi=True)
     type = fields.TextField(
         analyzer=html_strip,
         fields={'raw': fields.KeywordField(), 'lower': fields.TextField(analyzer=case_insensitive_keyword)}
@@ -76,6 +75,17 @@ class ProgramDocument(BaseDocument, OrganizationsMixin):
     excluded_from_seo = fields.BooleanField()
     excluded_from_search = fields.BooleanField()
     course_run_statuses = fields.KeywordField(multi=True)
+    program_topics = fields.TextField(
+        attr='tags_indexing',
+        analyzer=html_strip,
+        fields={
+            'raw': fields.KeywordField(multi=True),
+            'suggest': fields.CompletionField(multi=True),
+        },
+        multi=True
+    )
+    program_language = fields.TextField(multi=True)
+    courses = fields.TextField(multi=True)
 
     def prepare_aggregation_key(self, obj):
         return 'program:{}'.format(obj.uuid)
@@ -120,7 +130,16 @@ class ProgramDocument(BaseDocument, OrganizationsMixin):
 
     def prepare_type(self, obj):
         return obj.type.name_t
+    
+    def prepare_program_topics(self, obj):
+        return [topic.name for topic in obj.program_topics.all()]
 
+    def prepare_program_language(self, obj):
+        return dict(settings.LANGUAGES).get(obj.program_language, "English") if obj.program_language else "English"
+    
+    def prepare_courses(self, obj):
+        return [course.uuid for course in obj.courses.all()]
+    
     def get_queryset(self):
         return super().get_queryset().select_related('type').select_related('partner')
 

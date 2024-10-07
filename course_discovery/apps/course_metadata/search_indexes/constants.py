@@ -12,6 +12,7 @@ BASE_PROGRAM_FIELDS = (
     'title',
     'type',
     'uuid',
+    "banner_image",
 )
 
 COMMON_IGNORED_FIELDS = ('text',)

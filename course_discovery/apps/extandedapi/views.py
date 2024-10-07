@@ -520,7 +520,7 @@ class GetProgramTopics2(APIView):
         except Exception as e:
             sub_name = subject_name_param
 
-        for program in sub_en.program_set.all():
+        for program in sub_en.program_subjects.all():
             for topic in program.program_topics.all(): 
                 term = {
                 "original_term": topic.name,

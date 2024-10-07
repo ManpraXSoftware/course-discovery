@@ -24,6 +24,7 @@ from course_discovery.apps.course_metadata.models import (
 )
 from course_discovery.apps.course_metadata.toggles import BYPASS_LMS_DATA_LOADER__END_DATE_UPDATED_CHECK
 from course_discovery.apps.course_metadata.utils import push_to_ecommerce_for_course_run, subtract_deadline_delta
+from course_discovery.apps.ietf_language_tags.models import LanguageTag
 
 logger = logging.getLogger(__name__)
 
@@ -263,6 +264,12 @@ class CoursesApiDataLoader(AbstractDataLoader):
             instance.save(**kwargs)
 
     def format_course_run_data(self, body, course=None):
+        all_languages = dict(settings.LANGUAGES)
+        if body.get("language", None):
+            try:
+                course_language = LanguageTag.objects.get(code=body['language'])
+            except:
+                course_language = LanguageTag.objects.create(name=all_languages.get(body['language']),code=body['language'])
         defaults = {
             'key': body['id'],
             'start': self.parse_date(body['start']),
@@ -272,7 +279,8 @@ class CoursesApiDataLoader(AbstractDataLoader):
             'hidden': body.get('hidden', False),
             'license': body.get('license') or '',  # license cannot be None
             'title_override': body['name'],  # we support Studio edits, even though Publisher also owns titles
-            'pacing_type': self.get_pacing_type(body)
+            'pacing_type': self.get_pacing_type(body),
+            "language":course_language if body.get("language", None) else None
         }
 
         if not self.partner.uses_publisher:

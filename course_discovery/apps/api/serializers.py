@@ -53,6 +53,7 @@ from course_discovery.apps.course_metadata.utils import (
 )
 from course_discovery.apps.ietf_language_tags.models import LanguageTag
 from course_discovery.apps.publisher.api.serializers import GroupUserSerializer
+from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -923,7 +924,8 @@ class MinimalCourseRunSerializer(FlexFieldsSerializerMixin, TimestampModelSerial
     term = serializers.CharField(required=False, write_only=True)
     variant_id = serializers.UUIDField(allow_null=True, required=False)
     restriction_type = serializers.CharField(source='restricted_run.restriction_type', read_only=True)
-
+    language = serializers.SerializerMethodField()
+    
     @classmethod
     def prefetch_queryset(cls, queryset=None):
         # Explicitly check for None to avoid returning all CourseRuns when the
@@ -939,11 +941,16 @@ class MinimalCourseRunSerializer(FlexFieldsSerializerMixin, TimestampModelSerial
 
     class Meta:
         model = CourseRun
-        fields = ('key', 'uuid', 'title', 'external_key', 'image', 'short_description', 'marketing_url',
+        fields = ('key', 'uuid', 'title','converted_course_title', 'external_key', 'image', 'short_description', 'marketing_url',
                   'seats', 'start', 'end', 'go_live_date', 'enrollment_start', 'enrollment_end', 'weeks_to_complete',
                   'pacing_type', 'type', 'restriction_type', 'run_type', 'status', 'is_enrollable', 'is_marketable',
-                  'term', 'availability', 'variant_id')
+                  'term', 'availability', 'variant_id', 'language')
 
+    def get_language(self, obj):
+        if obj.language:
+            return obj.language.name
+        return "English"
+    
     def get_marketing_url(self, obj):
         include_archived = self.context.get('include_archived')
         now = datetime.datetime.now(pytz.UTC)
@@ -1733,6 +1740,14 @@ class MinimalProgramCourseSerializer(MinimalCourseSerializer):
         This is shared by both MinimalProgramSerializer and ProgramSerializer!
     """
     course_runs = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
+    
+    def get_title(self, course):
+        try:
+            converted_title = MultiLingualDiscovery.objects.language(self.context['request'].headers.get("Accept-Language", 'en')).filter(content_type='Course').active_translations(title=course.title).last()
+            return converted_title.title
+        except:
+            return course.title
 
     def get_course_runs(self, course):
         course_runs = self.context['course_runs']
@@ -1985,7 +2000,7 @@ class MinimalProgramSerializer(TaggitSerializer, FlexFieldsSerializerMixin, Base
     primary_subject_override = SubjectSerializer()
     level_type_override = LevelTypeSerializer()
     language_override = serializers.SlugRelatedField(slug_field='code', read_only=True)
-    labels = TagListSerializerField()
+    # labels = TagListSerializerField()
     taxi_form = TaxiFormSerializer()
     subscription = ProgramSubscriptionSerializer()
 
@@ -2019,7 +2034,7 @@ class MinimalProgramSerializer(TaggitSerializer, FlexFieldsSerializerMixin, Base
             'degree__specializations',
             'degree__rankings',
             'degree__quick_facts',
-            'labels',
+            # 'labels',
             Prefetch('courses', queryset=MinimalProgramCourseSerializer.prefetch_queryset()),
             Prefetch('authoring_organizations', queryset=OrganizationSerializer.prefetch_queryset(partner)),
         )
@@ -2032,7 +2047,7 @@ class MinimalProgramSerializer(TaggitSerializer, FlexFieldsSerializerMixin, Base
             'is_program_eligible_for_one_click_purchase', 'degree', 'curricula', 'marketing_hook',
             'total_hours_of_effort', 'recent_enrollment_count', 'organization_short_code_override',
             'organization_logo_override_url', 'primary_subject_override', 'level_type_override', 'language_override',
-            'labels', 'taxi_form', 'program_duration_override', 'data_modified_timestamp',
+            'taxi_form', 'program_duration_override', 'data_modified_timestamp',
             'excluded_from_search', 'excluded_from_seo', 'subscription', 'has_ofac_restrictions', 'ofac_comment',
             'course_run_statuses',
         )
@@ -2206,7 +2221,7 @@ class ProgramSerializer(MinimalProgramSerializer):
     in_year_value = ProductValueSerializer(required=False)
     skill_names = serializers.SerializerMethodField()
     skills = serializers.SerializerMethodField()
-    product_source = SourceSerializer(required=False, read_only=True)
+    # product_source = SourceSerializer(required=False, read_only=True)
 
     @classmethod
     def prefetch_queryset(cls, partner, queryset=None):
@@ -2225,7 +2240,7 @@ class ProgramSerializer(MinimalProgramSerializer):
             'partner',
             'geolocation',
             'in_year_value',
-            'product_source',
+            # 'product_source',
             'location_restriction',
             'degree',
             'language_override',
@@ -2248,7 +2263,7 @@ class ProgramSerializer(MinimalProgramSerializer):
             'degree__specializations',
             'degree__rankings',
             'degree__quick_facts',
-            'labels',
+            # 'labels',
             'expected_learning_items',
             'faq',
             'job_outlook_items',
@@ -2284,9 +2299,9 @@ class ProgramSerializer(MinimalProgramSerializer):
             'staff', 'credit_redemption_overview', 'applicable_seat_types', 'instructor_ordering',
             'enrollment_count', 'topics', 'credit_value', 'enterprise_subscription_inclusion', 'geolocation',
             'location_restriction', 'is_2u_degree_program', 'in_year_value', 'skill_names', 'skills',
-            'product_source', 'excluded_from_search', 'excluded_from_seo',
+             'excluded_from_search', 'excluded_from_seo',
         )
-        read_only_fields = ('enterprise_subscription_inclusion', 'product_source',)
+        read_only_fields = ('enterprise_subscription_inclusion',)
 
 
 class PathwaySerializer(BaseModelSerializer):
