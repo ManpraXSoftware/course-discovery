@@ -3177,7 +3177,7 @@ class Program(ManageHistoryMixin, PkSearchableMixin, TimeStampedModel):
         help_text=_('The Language of this Program.'),choices=ALL_LANGUAGES, default=ALL_LANGUAGES[0][0], max_length=255
         
     )
-    # product_source = models.ForeignKey(Source, models.SET_NULL, null=True, blank=True, related_name='programs')
+    product_source = models.ForeignKey(Source, models.SET_NULL, null=True, blank=True, related_name='programs')
     partner = models.ForeignKey(Partner, models.CASCADE, null=True, blank=False)
     overview = models.TextField(null=True, blank=True)
     total_hours_of_effort = models.PositiveSmallIntegerField(
