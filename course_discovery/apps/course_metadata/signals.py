@@ -195,9 +195,10 @@ def update_or_create_salesforce_organization(instance, created, **kwargs):
 @shared_task
 @receiver(post_save, sender=Organization)
 def update_enterprise_inclusion_for_courses_and_programs(instance, created, **kwargs):  # pylint: disable=unused-argument
-    update_org_program_and_courses_ent_sub_inclusion.delay(
-        org_pk=instance.pk, org_sub_inclusion=instance.enterprise_subscription_inclusion
-    )
+    # update_org_program_and_courses_ent_sub_inclusion.delay(
+    #     org_pk=instance.pk, org_sub_inclusion=instance.enterprise_subscription_inclusion
+    # )
+    return True
 
 
 @receiver(post_save, sender=Course)
