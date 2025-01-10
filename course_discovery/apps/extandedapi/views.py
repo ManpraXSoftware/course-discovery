@@ -13,6 +13,91 @@ import logging as log
 from django.db.models import Q
 from .serialializers import GetProgramCourseSerializer,GetCourseProgramSerializer
 
+LANGUAGES = [
+    ('en', 'English'),
+    ('rtl', 'Right-to-Left Test Language'),
+    ('eo', 'Dummy Language (Esperanto)'),  # Dummy languaged used for testing
+
+    ('am', 'አማርኛ'),  # Amharic
+    ('ar', 'العربية'),  # Arabic
+    ('az', 'azərbaycanca'),  # Azerbaijani
+    ('bg-bg', 'български (България)'),  # Bulgarian (Bulgaria)
+    ('bn-bd', 'বাংলা (বাংলাদেশ)'),  # Bengali (Bangladesh)
+    ('bn-in', 'বাংলা (ভারত)'),  # Bengali (India)
+    ('bs', 'bosanski'),  # Bosnian
+    ('ca', 'Català'),  # Catalan
+    ('ca@valencia', 'Català (València)'),  # Catalan (Valencia)
+    ('cs', 'Čeština'),  # Czech
+    ('cy', 'Cymraeg'),  # Welsh
+    ('da', 'dansk'),  # Danish
+    ('de-de', 'Deutsch (Deutschland)'),  # German (Germany)
+    ('el', 'Ελληνικά'),  # Greek
+    ('en-uk', 'English (United Kingdom)'),  # English (United Kingdom)
+    ('en@lolcat', 'LOLCAT English'),  # LOLCAT English
+    ('en@pirate', 'Pirate English'),  # Pirate English
+    ('es-419', 'Español (Latinoamérica)'),  # Spanish (Latin America)
+    ('es-ar', 'Español (Argentina)'),  # Spanish (Argentina)
+    ('es-ec', 'Español (Ecuador)'),  # Spanish (Ecuador)
+    ('es-es', 'Español (España)'),  # Spanish (Spain)
+    ('es-mx', 'Español (México)'),  # Spanish (Mexico)
+    ('es-pe', 'Español (Perú)'),  # Spanish (Peru)
+    ('et-ee', 'Eesti (Eesti)'),  # Estonian (Estonia)
+    ('eu-es', 'euskara (Espainia)'),  # Basque (Spain)
+    ('fa', 'فارسی'),  # Persian
+    ('fa-ir', 'فارسی (ایران)'),  # Persian (Iran)
+    ('fi-fi', 'Suomi (Suomi)'),  # Finnish (Finland)
+    ('fil', 'Filipino'),  # Filipino
+    ('fr', 'Français'),  # French
+    ('gl', 'Galego'),  # Galician
+    ('gu', 'ગુજરાતી'),  # Gujarati
+    ('he', 'עברית'),  # Hebrew
+    ('hi', 'हिन्दी'),  # Hindi
+    ('hr', 'hrvatski'),  # Croatian
+    ('hu', 'magyar'),  # Hungarian
+    ('hy-am', 'Հայերեն (Հայաստան)'),  # Armenian (Armenia)
+    ('id', 'Bahasa Indonesia'),  # Indonesian
+    ('it-it', 'Italiano (Italia)'),  # Italian (Italy)
+    ('ja-jp', '日本語 (日本)'),  # Japanese (Japan)
+    ('kk-kz', 'қазақ тілі (Қазақстан)'),  # Kazakh (Kazakhstan)
+    ('km-kh', 'ភាសាខ្មែរ (កម្ពុជា)'),  # Khmer (Cambodia)
+    ('kn', 'ಕನ್ನಡ'),  # Kannada
+    ('ko-kr', '한국어 (대한민국)'),  # Korean (Korea)
+    ('lt-lt', 'Lietuvių (Lietuva)'),  # Lithuanian (Lithuania)
+    ('ml', 'മലയാളം'),  # Malayalam
+    ('mn', 'Монгол хэл'),  # Mongolian
+    ('mr', 'मराठी'),  # Marathi
+    ('ms', 'Bahasa Melayu'),  # Malay
+    ('nb', 'Norsk bokmål'),  # Norwegian Bokmål
+    ('ne', 'नेपाली'),  # Nepali
+    ('nl-nl', 'Nederlands (Nederland)'),  # Dutch (Netherlands)
+    ('or', 'ଓଡ଼ିଆ'),  # Oriya
+    ('pl', 'Polski'),  # Polish
+    ('pt-br', 'Português (Brasil)'),  # Portuguese (Brazil)
+    ('pt-pt', 'Português (Portugal)'),  # Portuguese (Portugal)
+    ('ro', 'română'),  # Romanian
+    ('ru', 'Русский'),  # Russian
+    ('si', 'සිංහල'),  # Sinhala
+    ('sk', 'Slovenčina'),  # Slovak
+    ('sl', 'Slovenščina'),  # Slovenian
+    ('sq', 'shqip'),  # Albanian
+    ('sr', 'Српски'),  # Serbian
+    ('sv', 'svenska'),  # Swedish
+    ('sw', 'Kiswahili'),  # Swahili
+    ('ta', 'தமிழ்'),  # Tamil
+    ('te', 'తెలుగు'),  # Telugu
+    ('th', 'ไทย'),  # Thai
+    ('tr-tr', 'Türkçe (Türkiye)'),  # Turkish (Turkey)
+    ('uk', 'Українська'),  # Ukranian
+    ('ur', 'اردو'),  # Urdu
+    ('vi', 'Tiếng Việt'),  # Vietnamese
+    ('uz', 'Ўзбек'),  # Uzbek
+    ('zh-cn', '中文 (简体)'),  # Chinese (China)
+    ('zh-hk', '中文 (香港)'),  # Chinese (Hong Kong)
+    ('zh-tw', '中文 (台灣)'),  # Chinese (Taiwan)
+]
+
+LANGUAGE_DICT = dict(LANGUAGES)
+
 # pylint: disable=attribute-defined-outside-init
 class GetProgramTopics(APIView):
     """ GET Program Based Topics View."""
@@ -230,6 +315,7 @@ class GetProgramCoursesDetail(APIView):
             result = dict()
             result["id"] = request.GET['program_uuid']
             result["data"]= list()
+            lang_dict = LANGUAGE_DICT
             from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
             from course_discovery.apps.course_metadata.models import CourseRun
             language = request.GET['language'] if 'language' in request.GET else 'en'
@@ -241,6 +327,15 @@ class GetProgramCoursesDetail(APIView):
                     data['title'] = course.title
                     converted_title = MultiLingualDiscovery.objects.filter(content_type='course', course_title__key=course.canonical_course_run.key).language(language).first()
                     data['converted_title'] = converted_title.title if converted_title else ''
+                    
+                    try:
+                        data['language'] = course.canonical_course_run.language.code
+                        data['language_name'] = lang_dict[course.canonical_course_run.language.code]
+
+                    except:
+                        data['language'] = "en"
+                        data['language_name'] = lang_dict["en"]
+
                     result["data"].append(data)
                 elif course.card_image_url:
                     courseKey = str('course')+course.card_image_url.split('asset')[1].split('type')[0][0:-1]
@@ -249,6 +344,13 @@ class GetProgramCoursesDetail(APIView):
                     data['title'] = course.title
                     converted_title = MultiLingualDiscovery.objects.filter(content_type='course', course_title__key=courseKey).language(language).first()
                     data['converted_title'] = converted_title.title if converted_title else ''
+                    
+                    try:
+                        data['language'] = course.canonical_course_run.language.code
+                        data['language_name'] = lang_dict[course.canonical_course_run.language.code]
+                    except:
+                        data['language'] = "en"
+                        data['language_name'] = lang_dict["en"]
                     result["data"].append(data)
                     
                 else:
