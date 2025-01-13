@@ -84,6 +84,7 @@ class ProgramSearchDocumentSerializer(DocumentSerializer):
                 "banner_image",
                 'program_topics',
                 "program_language",
+                "program_language_code",
                 "courses"
             )
         )
