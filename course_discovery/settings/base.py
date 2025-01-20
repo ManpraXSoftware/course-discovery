@@ -519,11 +519,18 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
+    # 'DEFAULT_THROTTLE_CLASSES': (
+    #     'course_discovery.apps.core.throttles.OverridableUserRateThrottle',
+    # ),
+    # 'DEFAULT_THROTTLE_RATES': {
+    #     'user': '100/hour',
+    # },
+    # Manprax 
     'DEFAULT_THROTTLE_CLASSES': (
-        'course_discovery.apps.core.throttles.OverridableUserRateThrottle',
+        
     ),
     'DEFAULT_THROTTLE_RATES': {
-        'user': '100/hour',
+        
     },
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema'
 }
@@ -673,7 +680,9 @@ if os.environ.get('ENABLE_DJANGO_TOOLBAR', False):
 
 AWS_SES_REGION_ENDPOINT = "email.us-east-1.amazonaws.com"
 AWS_SES_REGION_NAME = "us-east-1"
+# CORS_ORIGIN_WHITELIST = ["http://apps.local.edly.io:8080"]
 CORS_ORIGIN_WHITELIST = []
+
 CSRF_COOKIE_SECURE = False
 ELASTICSEARCH_CLUSTER_URL = "http://127.0.0.1:9200/"
 EMAIL_BACKEND = "django_ses.SESBackend"

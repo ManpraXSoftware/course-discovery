@@ -21,4 +21,6 @@ urlpatterns = [
     path('getprogramtags2/', GetProgramTags2.as_view(), name='getprogramtags2'),
     path('get-program-topics2/', GetProgramTopics2.as_view(), name='get_program_topics2'),
     path('getcourseprogramdetail/', GetCouseProgramDetail.as_view(), name="getcourseprogramdetail"),
+    path('getdetaillangbased/',Getdetaillangbased.as_view(),name='getdetaillangbased'),
+
 ]

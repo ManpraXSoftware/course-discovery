@@ -570,7 +570,8 @@ class GetProgramTags2(APIView):
                         "program_uuid":prog_id,
                         "program_title":program.title,
                         "converted_program_title":converted_program[0].title if converted_program.count() else program.title,
-                        "tags":[]
+                        "tags":[],
+                        "program_language": program.program_language,
                     }
                     log.info("---------program response--{}".format(response))
                     all_tag_names = {tag.name for tag in program.program_topics.all()}
@@ -597,6 +598,9 @@ class GetProgramTags2(APIView):
                 resume_course_programs = filter(lambda x:str(x.uuid) in prog_uuids.split(','), programs)
                 log.info("Resume course programs: {}".format(resume_course_programs))
                 resume_prog_uuid = [str(prog.uuid) for prog in resume_course_programs]
+                course_lang = "en"
+                if course.canonical_course_run and course.canonical_course_run.language:
+                    course_lang = course.canonical_course_run.language.code
                 for prog in tags:
                     if prog['program_uuid'] in resume_prog_uuid:
                         converted_course_name = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Course')).active_translations(title=course.title)
@@ -605,6 +609,8 @@ class GetProgramTags2(APIView):
                             "course_name": course.title,
                             "converted_course_name":converted_course_name[0].title if converted_course_name.count() else course.title,
                             "block_id": resume_data[-1],
+                            "course_language":course_lang
+
                         }
         return Response(tags,status=status.HTTP_200_OK)
     
@@ -633,7 +639,8 @@ class GetProgramTopics2(APIView):
                 term = {
                 "original_term": topic.name,
                 "count": 1,
-                "term": topic.name
+                "term": topic.name,
+                "topic_id": topic.id
             }
                 if term not in res['terms']:
                     res['terms'].append(term)
@@ -672,3 +679,74 @@ class GetCouseProgramDetail(APIView):
         programs = Program.objects.filter(courses__canonical_course_run__key=course_key)
         serializer = GetCourseProgramSerializer(programs, many=True)
         return Response({"data":serializer.data}, status=status.HTTP_200_OK)
+    
+
+class Getdetaillangbased(APIView):
+    permission_classes = ()
+    def get(self,request):
+        language = request.GET.get('language', 'en')
+        subject_uuid = request.GET.get('subject_uuid', '')
+        program_uuid = request.GET.get('program_uuid', '')
+        topic_id = request.GET.get('topic_id', '')
+        tag = request.GET.get('topic', '')
+        param = {}
+        if subject_uuid:
+            try:
+                subject =  Subject.objects.language(language).get(uuid=subject_uuid)
+            except:
+                subject =  Subject.objects.language('en').get(uuid=subject_uuid)
+
+            param = {
+                    "subject_name": subject.name,
+                    "subject_uuid": subject.uuid
+                }
+            
+        if program_uuid:
+            try:
+                program =  Program.objects.get(uuid=program_uuid)
+                converted_program = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Program', program_title__id=program.id)).active_translations().first()
+                program_title = converted_program.title if converted_program else program.title
+                authoring_organizations = program.authoring_organizations.first()
+                org_name = authoring_organizations.name if authoring_organizations else ""
+
+                param.update({
+                    "program_title": program_title,
+                    "program_banner_url": program.banner_image.url,
+                    "org_name": org_name
+                })
+            except Exception as e:
+                log.error(f"An error occurred: {e}")
+                pass
+
+        if topic_id and program_uuid:
+            try:
+                program_tag = program.program_topics.filter(id=topic_id).first()
+                tag_name = program_tag.name
+                converted_tag = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Tag')).active_translations(title=tag_name).first()
+                tag_title = converted_tag.title if converted_tag else tag_name
+
+                param.update({
+                    "tag_title": tag_title,
+                })
+            except Exception as e:
+                log.error(f"An error occurred: {e}")
+                pass
+        
+        if topic_id and not program_uuid:
+            try:
+                # import pdb; pdb.set_trace()
+                tag_name = subject.program_subjects.filter(program_topics__id=topic_id).values_list('program_topics__name', flat=True).first()
+                if tag_name: 
+                    converted_tag = MultiLingualDiscovery.objects.language(language).filter(Q(content_type='Tag')).active_translations(title=tag_name).first()
+                    tag_title = converted_tag.title if converted_tag else tag_name
+                    param.update({
+                        "tag_title": tag_title,
+                    })
+                    
+            except Exception as e:
+                log.error(f"An error occurred: {e}")
+                pass
+
+         
+        return Response(param,status=status.HTTP_200_OK)
+    
