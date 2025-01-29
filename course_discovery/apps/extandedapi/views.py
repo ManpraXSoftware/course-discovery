@@ -212,9 +212,11 @@ class CustomSearch(APIView):
     def get(self,request):
         programs_details = None
         content = CourseSearchViewSet.as_view({'get': 'list'})(request._request)
+        language = request.headers['Accept-Language']
         for x in content.data['results']:
             programs_details = self.get_program_details(x['key'])
             x['program_details'] = programs_details
+        content.data['results'] = list(filter(lambda data:(data['course_runs'][0]['language']=='en' or data['course_runs'][0]['language']== language), content.data['results']))
         final_response = OrderedDict()
         final_response["count"] = len(content.data['results'])
         final_response["next"] = content.data['next'] if content.data['next'] else None

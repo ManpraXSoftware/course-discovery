@@ -53,6 +53,10 @@ class CourseSearchDocumentSerializer(ModelObjectDocumentSerializerMixin, DateTim
     languages = serializers.SerializerMethodField()
 
     def course_run_detail(self, request, detail_fields, course_run):
+        try:
+            language = course_run.language.code
+        except:
+            language = "en"
         course_run_detail = {
             'key': course_run.key,
             'enrollment_start': self.handle_datetime_field(course_run.enrollment_start),
@@ -71,6 +75,8 @@ class CourseSearchDocumentSerializer(ModelObjectDocumentSerializerMixin, DateTim
             'estimated_hours': get_course_run_estimated_hours(course_run),
             'first_enrollable_paid_seat_price': course_run.first_enrollable_paid_seat_price or 0.0,
             'is_enrollable': course_run.is_enrollable,
+            "language":language
+
         }
         if detail_fields:
             course_run_detail.update(
