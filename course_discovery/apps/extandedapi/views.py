@@ -99,6 +99,80 @@ LANGUAGES = [
 LANGUAGE_DICT = dict(LANGUAGES)
 
 # pylint: disable=attribute-defined-outside-init
+# class GetProgramTopics(APIView):
+#     """ GET Program Based Topics View."""
+#     permission_classes = (IsAuthenticated,)
+    
+#     def get(self, request):
+#         subject_name_param = request.GET.get('subject_name')
+#         sub = SubjectTranslation.objects.filter(name=subject_name_param)
+
+#         try:
+#             sub_id = sub[0].master.id
+#             sub_en = Subject.objects.language('en').get(id=sub_id)
+#             sub_name = sub_en.name
+            
+#         except Exception as e:
+#             sub_name = subject_name_param
+        
+#         body = {
+#             "query": {"bool": {
+#                 "must": [
+#                         { "match": {
+#                             "content_type": "program"
+#                             }
+#                         },
+#                         {"match": {
+#                             "program_subjects": sub_name
+#                             }
+#                         }
+#                         ]
+#                     }
+#                 },
+#             "facets" : {
+#                 "tags" : { "terms" : {"field" : "program_topics_exact"} }
+#                 }
+#             }
+#         alias = settings.HAYSTACK_CONNECTIONS['default']['INDEX_NAME']
+        
+#         host = settings.HAYSTACK_CONNECTIONS['default']['URL']
+        
+#         connection = Elasticsearch(host)
+#         index_value = connection.indices.get_alias(name=alias)
+#         es_response = connection.search(index=[i for i in index_value.keys()][0], body=body)
+
+        
+
+#         try:
+#             accept_language = request.headers['Accept-Language']
+#             if not accept_language or accept_language=='en':
+#                 return Response(es_response['facets']['tags'])
+#         except KeyError:
+#             return Response(es_response['facets']['tags'])
+
+        
+        
+#         tag = MultiLingualDiscovery.objects.language('en').filter(Q(content_type='Tag')).active_translations(title__in=[i['term'] for i in es_response['facets']['tags']['terms']])
+
+#         converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title__in=[i.title for i in tag])
+
+#         data = {}
+#         for j in range(len(converted_tag)):
+#             if tag[j].title != converted_tag[j].title:
+#                 data[tag[j].title] = converted_tag[j].title
+#             else:
+#                 data[tag[j].title] = ''
+        
+#         for i in range(len(es_response['facets']['tags']['terms'])):
+
+#             if es_response['facets']['tags']['terms'][i]['term'] in data:
+#                  es_response['facets']['tags']['terms'][i]['converted_term'] = data[es_response['facets']['tags']['terms'][i]['term']]
+#             else:
+#                 es_response['facets']['tags']['terms'][i]['converted_term'] = ''
+
+
+#         return Response(es_response['facets']['tags'])
+
 class GetProgramTopics(APIView):
     """ GET Program Based Topics View."""
     permission_classes = (IsAuthenticated,)
@@ -106,72 +180,72 @@ class GetProgramTopics(APIView):
     def get(self, request):
         subject_name_param = request.GET.get('subject_name')
         sub = SubjectTranslation.objects.filter(name=subject_name_param)
-
+        res = {"total":0, "terms":[], "missing": 0,"_type": "terms", "other": 0}
         try:
-            sub_id = sub[0].master.id
-            sub_en = Subject.objects.language('en').get(id=sub_id)
-            sub_name = sub_en.name
+            if sub:
+                sub_id = sub[0].master.id
+                sub_en = Subject.objects.language('en').get(id=sub_id)
+                sub_name = sub_en.name
+            else:
+                return Response(res)
             
         except Exception as e:
             sub_name = subject_name_param
-        
-        body = {
-            "query": {"bool": {
-                "must": [
-                        { "match": {
-                            "content_type": "program"
-                            }
-                        },
-                        {"match": {
-                            "program_subjects": sub_name
-                            }
-                        }
-                        ]
-                    }
-                },
-            "facets" : {
-                "tags" : { "terms" : {"field" : "program_topics_exact"} }
-                }
+
+        for program in sub_en.program_subjects.all():
+            for topic in program.program_topics.all(): 
+                term = {
+                "converted_term": "",
+                "count": 1,
+                "term": topic.name
             }
-        alias = settings.HAYSTACK_CONNECTIONS['default']['INDEX_NAME']
-        
-        host = settings.HAYSTACK_CONNECTIONS['default']['URL']
-        
-        connection = Elasticsearch(host)
-        index_value = connection.indices.get_alias(name=alias)
-        es_response = connection.search(index=[i for i in index_value.keys()][0], body=body)
-
-        
-
+                if term not in res['terms']:
+                    res['terms'].append(term)
+                    res['total'] = res['total']+1
         try:
             accept_language = request.headers['Accept-Language']
+            # accept_language = 'ml'
             if not accept_language or accept_language=='en':
-                return Response(es_response['facets']['tags'])
+                return Response(res)
         except KeyError:
-            return Response(es_response['facets']['tags'])
+            return Response(res)
+        tag = MultiLingualDiscovery.objects.language('en').filter(Q(content_type='Tag')).active_translations(title__in=[i['term'] for i in res['terms']])
 
-        
-        
-        tag = MultiLingualDiscovery.objects.language('en').filter(Q(content_type='Tag')).active_translations(title__in=[i['term'] for i in es_response['facets']['tags']['terms']])
-
-        converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(title__in=[i.title for i in tag])
+        converted_tag = MultiLingualDiscovery.objects.language(accept_language).filter(Q(content_type='Tag')).active_translations(
+            title__in=[i.title for i in tag],
+        )
 
         data = {}
         for j in range(len(converted_tag)):
-            if tag[j].title != converted_tag[j].title:
-                data[tag[j].title] = converted_tag[j].title
+            # import pdb; pdb.set_trace()
+
+            # if converted_tag[j].get_current_language() != 'en-gb,en-us;q=0.9,en;q=0.8' and converted_tag[j].get_current_language() != 'en':
+            #     data[tag[j].title] = converted_tag[j].title
+
+            data[tag[j].title] = converted_tag[j].title
+
+        for i in range(len(res['terms'])):
+            if res['terms'][i]['term'] in data:
+                res['terms'][i]['converted_term'] = data[res['terms'][i]['term']]
             else:
-                data[tag[j].title] = ''
-        
-        for i in range(len(es_response['facets']['tags']['terms'])):
+                res['terms'][i]['converted_term'] = res['terms'][i]['term']
 
-            if es_response['facets']['tags']['terms'][i]['term'] in data:
-                 es_response['facets']['tags']['terms'][i]['converted_term'] = data[es_response['facets']['tags']['terms'][i]['term']]
-            else:
-                es_response['facets']['tags']['terms'][i]['converted_term'] = ''
+       
+    
+        return Response(res)
+    
+#    For ml
 
 
-        return Response(es_response['facets']['tags'])
+# (Pdb) tag[j].__dict__
+# {'_translations_cache': defaultdict(<class 'dict'>, {<class 'course_discovery.apps.mx_multilingual_discovery.models.MultiLingualDiscoveryTranslation'>
+# : {'en': <MultiLingualDiscoveryTranslation: #1, en, master: #1>}}), 
+# '_current_language': 'en', '_state': <django.db.models.base.ModelState object at 0x7f4aef6966f0>, 'id': 1, 'content_type': 'tag', 'program_title_id': None, 'course_title_id': None}
+# (Pdb) converted_tag[j].__dict__
+
+# {'_translations_cache': defaultdict(<class 'dict'>, {<class 'course_discovery.apps.mx_multilingual_discovery.models.MultiLingualDiscoveryTranslation'>: 
+# {'ml': <MultiLingualDiscoveryTranslation: #2, ml, master: #1>}}), '_current_language': 'ml', '_state': <django.db.models.base.ModelState object at 0x7f4aef6db680>, 'id': 1, 'content_type': 'tag', 'program_title_id': None, 'course_title_id': None}
+
 
 class CustomSearch(APIView):
     """
