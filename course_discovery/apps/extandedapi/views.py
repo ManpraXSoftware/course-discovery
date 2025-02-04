@@ -434,7 +434,7 @@ class GetProgramCoursesDetail(APIView):
                 else:
                     log.info("_________ course {} neither having card_image_url nor canonical_course_run".format(course))
                     continue
-
+            log.info("data before sorting {}".format(result['data']))
             filter_data = filter(lambda data :( data.get("language")=="en" or data.get("language")==language),result['data'])
             sorted_data = sorted(filter_data, key=lambda d: d['created'])
             result['data'] = sorted_data
