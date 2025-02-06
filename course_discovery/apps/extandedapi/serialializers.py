@@ -1,8 +1,25 @@
 from rest_framework import serializers
 from course_discovery.apps.course_metadata.models import Course, Program
 
+# class GetProgramCourseSerializer(serializers.ModelSerializer):
+#     course_id = serializers.SerializerMethodField()
+
+#     def get_course_id(self, obj):
+#         if obj.canonical_course_run:
+#             return obj.canonical_course_run.key
+#         elif obj.card_image_url:
+#             return 'course-v1'+obj.card_image_url.split("type")[0].split("asset-v1")[1][0:-1]
+#         else:
+#             return ''
+
+#     class Meta:
+#         model = Course
+#         fields = ('canonical_course_run', 'course_id')
+
 class GetProgramCourseSerializer(serializers.ModelSerializer):
     course_id = serializers.SerializerMethodField()
+    language = serializers.SerializerMethodField()
+    start = serializers.SerializerMethodField()
 
     def get_course_id(self, obj):
         if obj.canonical_course_run:
@@ -11,11 +28,27 @@ class GetProgramCourseSerializer(serializers.ModelSerializer):
             return 'course-v1'+obj.card_image_url.split("type")[0].split("asset-v1")[1][0:-1]
         else:
             return ''
+        
+    def get_language(self,obj):
+        lang = 'en'
+        try:
+            lang = obj.canonical_course_run.language.code
+        except:
+            lang = "en"
+        if lang == '' or lang == None:
+            lang = "en"
+        return lang
+        
+    def get_start(self,obj):
+        try:
+            return obj.canonical_course_run.start
+        except:
+            return None
 
     class Meta:
         model = Course
-        fields = ('canonical_course_run', 'course_id')
-        
+        fields = ('canonical_course_run', 'course_id', "language", 'start', 'created')
+
 class GetCourseProgramSerializer(serializers.ModelSerializer):
     subjects = serializers.SerializerMethodField()
     topics = serializers.SerializerMethodField()
@@ -36,5 +69,5 @@ class GetCourseProgramSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Program
-        fields = ("title","subjects", "topics")
+        fields = ("uuid","title","subjects", "topics")
         
