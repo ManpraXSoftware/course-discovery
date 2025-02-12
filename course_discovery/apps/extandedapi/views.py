@@ -24,6 +24,7 @@ LANGUAGES = [
     ('bg-bg', 'български (България)'),  # Bulgarian (Bulgaria)
     ('bn-bd', 'বাংলা (বাংলাদেশ)'),  # Bengali (Bangladesh)
     ('bn-in', 'বাংলা (ভারত)'),  # Bengali (India)
+    ('bn', 'বাংলা (ভারত)'),  # Bengali (India)
     ('bs', 'bosanski'),  # Bosnian
     ('ca', 'Català'),  # Catalan
     ('ca@valencia', 'Català (València)'),  # Catalan (Valencia)
