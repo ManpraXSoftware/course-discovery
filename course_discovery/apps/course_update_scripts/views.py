@@ -7,8 +7,9 @@ import os
 import json
 
 def update_scripts(request):
+    # import pdb; pdb.set_trace()
     file_dir_curr = os.path.dirname(__file__)   # current dir path
-    file_dir = '/'.join(file_dir_curr.split('/')[:6])   # json file dir path
+    file_dir = '/'.join(file_dir_curr.split('/')[:4])   # json file dir path
     filepath = os.path.join(file_dir,'command_status.json') # file path
     with open(filepath, "r") as jsonFile:
         data = json.load(jsonFile)
@@ -47,7 +48,8 @@ def callcourse_sync():
 
 def callupdate_index():
     time.sleep(2)
-    call_command('update_index', '--disable-change-limit', verbosity=0)
+    # call_command('update_index', '--disable-change-limit', verbosity=0)
+    call_command('update_index', verbosity=0)
 
 def discovery_views(request):
     Thread(target=callcourse_sync).start()

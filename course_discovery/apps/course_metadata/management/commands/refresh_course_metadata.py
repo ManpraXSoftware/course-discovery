@@ -18,6 +18,9 @@ from course_discovery.apps.course_metadata.data_loaders.api import (
 )
 from course_discovery.apps.course_metadata.models import Course, DataLoaderConfig, Image, Video
 from course_discovery.apps.course_metadata.signals import connect_api_change_receiver
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+import os, json
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +80,22 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # For each partner defined...
+
+        # Manprax
+        curr_datetime_utc = datetime.now()
+        delta = relativedelta(hours=5,minutes=30)
+        ist_time = curr_datetime_utc + delta
+        file_dir_curr = os.path.dirname(__file__)   # current dir path
+        file_dir = '/'.join(file_dir_curr.split('/')[:4])   # json file dir path
+        filepath = os.path.join(file_dir,'command_status.json') # file path
+        with open(filepath, "r+") as jsonFile:
+            data = json.load(jsonFile)
+            # overwirte the value for last run time and status of the command.
+            data['course_meta_status'] = True
+            data['course_meta_timestamp'] = ist_time.strftime('%a, %d %b %Y %H:%M:%S') + ' IST'  #ist_time
+            jsonFile.seek(0)  # rewind
+            json.dump(data, jsonFile)
+            jsonFile.truncate()
         partners = Partner.objects.all()
 
         data_loader_stage = options.get('data_loader_stage')

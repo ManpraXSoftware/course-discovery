@@ -9,8 +9,9 @@ from django_elasticsearch_dsl.management.commands.search_index import Command as
 from django_elasticsearch_dsl.registries import registry
 from elasticsearch_dsl import Mapping
 from elasticsearch_dsl.connections import get_connection
-
 from course_discovery.apps.core.utils import ElasticsearchUtils
+from dateutil.relativedelta import relativedelta
+import os,json
 
 OLD_AND_NEW_INDEX_NAMES = slice(2, 4)
 
@@ -74,6 +75,25 @@ class Command(DjangoESDSLCommand):
     def handle(self, *args, **options):
         from django.utils import translation  # pylint: disable=import-outside-toplevel
         translation.activate(settings.LANGUAGE_CODE)
+
+        # Manprax
+        from datetime import datetime
+
+        curr_datetime_utc = datetime.now()
+        delta = relativedelta(hours=5,minutes=30)
+        ist_time = curr_datetime_utc + delta
+        file_dir_curr = os.path.dirname(__file__)   # current dir path
+        file_dir = '/'.join(file_dir_curr.split('/')[:4])   # json file dir path
+        filepath = os.path.join(file_dir,'command_status.json') # file path
+        with open(filepath, "r+") as jsonFile:
+            data = json.load(jsonFile)
+            # overwirte the value for last run time and status of the command.
+            data['update_index_status'] = True
+            data['update_index_timestamp'] = ist_time.strftime('%a, %d %b %Y %H:%M:%S') + ' IST'  #ist_time
+            jsonFile.seek(0)  # rewind
+            json.dump(data, jsonFile)
+            jsonFile.truncate()
+
         specified_backend = options.get('using')
         supported_backends = tuple(settings.ELASTICSEARCH_DSL.keys())
         if specified_backend and specified_backend not in supported_backends:
