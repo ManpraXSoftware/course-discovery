@@ -12,6 +12,7 @@ from elasticsearch_dsl.connections import get_connection
 from course_discovery.apps.core.utils import ElasticsearchUtils
 from dateutil.relativedelta import relativedelta
 import os,json
+from django.core.cache import cache
 
 OLD_AND_NEW_INDEX_NAMES = slice(2, 4)
 
@@ -151,8 +152,21 @@ class Command(DjangoESDSLCommand):
 
         if indexes_pending:
             raise CommandError('Sanity check failed for the new index(es): {}'.format(indexes_pending))
-
-        return True
+        # Manprax
+        else:
+            cache.set('update_index_status', False)
+            file_dir_curr = os.path.dirname(__file__)   # current dir path
+            file_dir = '/'.join(file_dir_curr.split('/')[:4])   # json file dir path
+            filepath = os.path.join(file_dir,'command_status.json')
+            with open(filepath, "r+") as jsonFile:
+                data = json.load(jsonFile)
+                # overwirte the value for last run time and status of the command.
+                data['update_index_status'] = False
+                jsonFile.seek(0)  # rewind
+                json.dump(data, jsonFile)
+                jsonFile.truncate()
+            return "Indexing Run SuccessFully"
+        # return True
 
     @staticmethod
     def percentage_change(current, previous):

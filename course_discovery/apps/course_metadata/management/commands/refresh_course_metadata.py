@@ -21,6 +21,7 @@ from course_discovery.apps.course_metadata.signals import connect_api_change_rec
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import os, json
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +216,15 @@ class Command(BaseCommand):
 
         # Re-connect back the api_change_receiver receiver to post_save and post_delete signals
         connect_api_change_receiver()
+        # Manprax
+        cache.set('course_meta_status', False)
+        with open(filepath, "r+") as jsonFile:
+            data = json.load(jsonFile)
+            # overwirte the value for last run time and status of the command.
+            data['course_meta_status'] = False
+            jsonFile.seek(0)  # rewind
+            json.dump(data, jsonFile)
+            jsonFile.truncate()
 
         if not success:
             raise CommandError('One or more of the data loaders above failed.')
