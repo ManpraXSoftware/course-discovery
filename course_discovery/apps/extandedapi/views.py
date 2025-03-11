@@ -753,9 +753,12 @@ class GetCouseProgramDetail(APIView):
     def get(self, request):
         course_id = self.request.query_params.get("course_id", None)
         course_key = course_id.replace(" ", "+")
+        course_title = Course.objects.get(canonical_course_run__key=course_key).title
         programs = Program.objects.filter(courses__canonical_course_run__key=course_key)
         serializer = GetCourseProgramSerializer(programs, many=True)
-        return Response({"data":serializer.data}, status=status.HTTP_200_OK)
+        # return Response({"data":serializer.data}, status=status.HTTP_200_OK)
+        return Response({"data":serializer.data, "course_title":course_title}, status=status.HTTP_200_OK)
+    
     
 
 class Getdetaillangbased(APIView):
