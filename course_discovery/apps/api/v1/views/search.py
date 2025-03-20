@@ -170,6 +170,7 @@ class ProgramSearchViewSet(BaseElasticsearchDocumentViewSet):
         queryset = super().get_queryset()
         search = self.request.query_params.get("search", None)
         program_topics = self.request.query_params.get("program_topics", None)
+        authoring_organization_uuids = self.request.query_params.get("authoring_organization_uuids", None)
         
         if search:
             wildcard_query = f"*{search.lower()}*"
@@ -177,6 +178,9 @@ class ProgramSearchViewSet(BaseElasticsearchDocumentViewSet):
             queryset = queryset.query( Q("bool", must=[query]))
         if program_topics:
             query = Q("term", program_topics__raw=program_topics)
+            queryset = queryset.query(query)
+        if authoring_organization_uuids:
+            query = Q("term", authoring_organization_uuids=authoring_organization_uuids)
             queryset = queryset.query(query)
         return queryset
 
