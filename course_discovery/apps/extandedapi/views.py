@@ -398,8 +398,13 @@ class GetProgramCoursesDetail(APIView):
             language = request.GET['language'] if 'language' in request.GET else 'en'
             for course in program.courses.all():
                 data = dict()
-                data["created"] = course.created
-
+                try:
+                    course_run = CourseRun.objects.filter(course__id= course.id).first()
+                    data["created"] = course_run.start
+                except:
+                    data["created"] = course.created
+                
+            
                 if course.canonical_course_run:
                     log.info("_________ course {} having canonical_course_run it's key is {}".format(course,course.canonical_course_run.key))
                     data['key'] = course.canonical_course_run.key
