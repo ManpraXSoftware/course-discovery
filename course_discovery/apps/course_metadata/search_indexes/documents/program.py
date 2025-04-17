@@ -87,6 +87,7 @@ class ProgramDocument(BaseDocument, OrganizationsMixin):
     program_language = fields.TextField(multi=True)
     program_language_code = fields.TextField(multi=True)
     courses = fields.TextField(multi=True)
+    program_subjects = fields.TextField(multi=True)
 
     def prepare_aggregation_key(self, obj):
         return 'program:{}'.format(obj.uuid)
@@ -140,6 +141,9 @@ class ProgramDocument(BaseDocument, OrganizationsMixin):
     
     def prepare_program_language_code(self, obj):
         return obj.program_language if obj.program_language else "en"
+    
+    def prepare_program_subjects(self, obj):
+        return [psubjects.name for psubjects in obj.program_subjects.all()]
     
     def prepare_courses(self, obj):
         return [course.uuid for course in obj.courses.all()]

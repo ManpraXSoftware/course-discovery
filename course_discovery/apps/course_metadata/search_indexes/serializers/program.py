@@ -85,7 +85,8 @@ class ProgramSearchDocumentSerializer(DocumentSerializer):
                 'program_topics',
                 "program_language",
                 "program_language_code",
-                "courses"
+                "courses",
+                "program_subjects"
             )
         )
 
