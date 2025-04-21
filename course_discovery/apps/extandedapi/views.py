@@ -12,6 +12,7 @@ from itertools import chain
 import logging as log
 from django.db.models import Q
 from .serialializers import GetProgramCourseSerializer,GetCourseProgramSerializer
+import logging
 
 LANGUAGES = [
     ('en', 'English'),
@@ -610,8 +611,14 @@ class GetReportsFilterData(APIView):
         subjects_obj = SubjectTranslation.objects.filter(language_code='en')
         subjects = {sub.name:sub.name.upper() for sub in subjects_obj}
 
-        courses = CourseRun.objects.all()
-        courses = {course.title_override:course.title_override.upper() for course in courses}
+        courses_obj = CourseRun.objects.all()
+        # courses = {course.title_override:course.title_override.upper() for course in courses}
+        courses = {}
+        for course in courses_obj:
+            if course.title_override:
+                courses[course.title_override] = course.title_override.upper()
+            else:
+                logging.warning(f"CourseRun with key={course.key} has title_override=None")
 
         result['programs']=programs
         result['orgs']=orgs
