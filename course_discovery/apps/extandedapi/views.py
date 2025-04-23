@@ -606,7 +606,7 @@ class GetReportsFilterData(APIView):
         programs = {prog.title:prog.title.upper() for prog in programs_obj}
 
         orgs_obj = Organization.objects.filter(name__isnull=False)
-        orgs = {x.name:x.name.upper() for x in orgs_obj}
+        orgs = {x.key:x.name.upper() for x in orgs_obj}
 
         subjects_obj = SubjectTranslation.objects.filter(language_code='en')
         subjects = {sub.name:sub.name.upper() for sub in subjects_obj}
