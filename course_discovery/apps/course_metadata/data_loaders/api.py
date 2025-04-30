@@ -236,6 +236,15 @@ class CoursesApiDataLoader(AbstractDataLoader):
         self._update_instance(draft_course, validated_data)
 
         course = official_course or draft_course
+        # if course.short_description != '' : 
+        #     course.short_description = body['short_description']
+        #     course.save()
+        try:
+            course.short_description = body['short_description']
+        except:
+            course.short_description = ''
+        course.save()
+
         logger.info('Processed course with key [%s].', course.key)
 
     def _update_verified_deadline_for_course_run(self, course_run):
