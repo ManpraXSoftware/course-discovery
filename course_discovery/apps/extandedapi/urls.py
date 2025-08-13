@@ -23,4 +23,9 @@ urlpatterns = [
     path('getcourseprogramdetail/', GetCouseProgramDetail.as_view(), name="getcourseprogramdetail"),
     path('getdetaillangbased/',Getdetaillangbased.as_view(),name='getdetaillangbased'),
 
+    path('getcoursedetail/',GetCourseDetail.as_view(),name='get_course_detail'),
+    path('getprogramcoursedetail/',GetProgramCourseDetail.as_view(),name='get_program_detail'),
+
+
+
 ]

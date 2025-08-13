@@ -18,6 +18,8 @@ def update_scripts(request):
         update_index_timestamp = data['update_index_timestamp']
         update_index_status = data['update_index_status']
 
+        update_mx_index_contents_status = data['update_mx_index_contents_status']
+        update_mx_index_contents_timestamp = data['update_mx_index_contents_timestamp']
 
     if update_index_status is not None:
         if update_index_status:
@@ -34,12 +36,24 @@ def update_scripts(request):
             course_meta_command_state = course_meta_status
     else:
         course_meta_command_state = False
+
+
+    if update_mx_index_contents_status is not None:
+        if update_mx_index_contents_status:
+            update_mx_index_contents_command_state = update_mx_index_contents_status
+        else:
+            update_mx_index_contents_command_state = update_mx_index_contents_status
+    else:
+        update_mx_index_contents_command_state = False
     
     context = {
         "course_meta_command_state":course_meta_command_state,
         "course_meta_timestamp":course_meta_timestamp,
         "update_index_command_state":update_index_command_state,
-        "update_index_timestamp":update_index_timestamp
+        "update_index_timestamp":update_index_timestamp,
+
+        "update_mx_index_contents_command_state": update_mx_index_contents_command_state,
+        "update_mx_index_contents_timestamp": update_mx_index_contents_timestamp
         }
     return render(request, 'update_scripts.html',context)
 
@@ -61,3 +75,14 @@ def update_indexCmd(request):
     time.sleep(2)
     return redirect(update_scripts)
    
+
+def callupdate_mx_index_contents():
+    time.sleep(2)
+    # call_command('mx_index_contents')
+    call_command('mx_index_contents', verbosity=0)
+
+
+def update_mx_index_contentsCmd(request):
+    Thread(target=callupdate_mx_index_contents).start()
+    time.sleep(2)
+    return redirect(update_scripts)

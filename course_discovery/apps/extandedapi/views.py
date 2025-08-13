@@ -568,6 +568,7 @@ class GetTag(APIView):
         
         return Response(result,status=status.HTTP_200_OK)
 
+
 class GetCourseReportsData(APIView):
     permission_classes = (AllowAny,)
     def get(self,request):
@@ -841,4 +842,402 @@ class Getdetaillangbased(APIView):
 
          
         return Response(param,status=status.HTTP_200_OK)
+
+from parler.models import TranslationDoesNotExist
+class GetCourseDetail(APIView):
+    permission_classes = [AllowAny]
     
+    def get(self, request):
+        # URL - {DISCOVERY_URL}/extandedapi/getcoursedetail/?course_id=course-v1%3AManprax%2BVE_TIK_MATH_G8_P2_CH08%2B2021
+        course_run_key = request.GET.get('course_id')
+        
+        if not course_run_key:
+            return Response(
+                {
+                    "status": "fail",
+                    "message": "course_id is required",
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Fetch the CourseRun and its associated Course
+            course_run = CourseRun.objects.select_related('course').get(key=course_run_key)
+            course = course_run.course
+            
+            # Fetch programs related to the course
+            programs = Program.objects.filter(courses=course)
+            
+            if not programs.exists():
+                # return Response(
+                #     {
+                #         "status": "fail",
+                #         "message": "No programs found for the given course_id",
+                #     },
+                #     status=status.HTTP_404_NOT_FOUND
+                # )
+                pass
+
+            # Get all available languages from MultiLingualDiscovery translations
+            available_languages = MultiLingualDiscoveryTranslation.objects.values('language_code').distinct()
+            available_languages = [lang['language_code'] for lang in available_languages]
+
+            response_data = []
+            for program in programs:
+                # Fetch translated tags
+                tags_data = []
+                for tag in program.program_topics.all():
+                    tag_translations = []
+                    try:
+                        tag_translation = MultiLingualDiscoveryTranslation.objects.filter(
+                            title=tag.name
+                        ).last()
+                        if tag_translation:
+                            for language in available_languages:
+                                try:
+                                    translated_tag = MultiLingualDiscovery.objects.language(language).filter(
+                                        Q(content_type='Tag') & Q(id=tag_translation.master.id)
+                                    ).first()
+                                    if translated_tag:
+                                        tag_translations.append(translated_tag.title)
+                                except TranslationDoesNotExist:
+                                    continue
+                            if not tag_translations:  # Fallback to default
+                                tag_translations.append(tag_translation.title)
+                    except MultiLingualDiscoveryTranslation.DoesNotExist:
+                        tag_translations.append(tag.name)
+                    tags_data.append({
+                        "name": tag.name,
+                        "tag_translations": tag_translations
+                    })
+
+                # Fetch translated program data
+                program_translations = []
+                program_translation = MultiLingualDiscoveryTranslation.objects.filter(
+                    title=program.title
+                ).last()
+                if program_translation:
+                    for language in available_languages:
+                        try:
+                            translated_program = MultiLingualDiscovery.objects.language(language).filter(
+                                Q(content_type='Program') & Q(id=program_translation.master.id)
+                            ).first()
+                            if translated_program:
+                                program_translations.append(translated_program.title)
+                        except TranslationDoesNotExist:
+                            continue
+                    if not program_translations:  # Fallback to default
+                        program_translations.append(program_translation.title)
+
+                # Fetch subject names
+                subjects_data = []
+                for subject in program.program_subjects.all():
+                    subject_translations = []
+                    subject_translation = subject.translations.first()
+                    if subject_translation:
+                        for language in available_languages:
+                            try:
+                                translated_subject = subject.translations.get(language_code=language)
+                                subject_translations.append(translated_subject.name)
+                            except TranslationDoesNotExist:
+                                continue
+                        if not subject_translations:  # Fallback to default
+                            subject_translations.append(subject_translation.name)
+
+                    subjects_data.append({
+                        "name": subject.name,
+                        "subject_translations": subject_translations
+                    })
+
+                # Construct program response
+                program_data = {
+                    "program_name": program.title,
+                    "program_uuid": str(program.uuid),
+                    "subjects": subjects_data,
+                    "program_language": program.program_language,
+                    "tags": tags_data,
+                    "subtitle": program.subtitle,
+                    "translated_program": program_translations
+                }
+                response_data.append(program_data)
+
+            # Fetch course translation
+            course_translations = []
+            course_translation = MultiLingualDiscoveryTranslation.objects.filter(
+                title=course.title
+            ).last()
+            if course_translation:
+                for language in available_languages:
+                    try:
+                        translated_course = MultiLingualDiscovery.objects.language(language).filter(
+                            Q(content_type='Course') & Q(id=course_translation.master.id)
+                        ).first()
+                        if translated_course:
+                            course_translations.append(translated_course.title)
+                    except TranslationDoesNotExist:
+                        continue
+                if not course_translations:  # Fallback to default
+                    course_translations.append(course_translation.title)
+            # import pdb; pdb.set_trace()
+            return Response(
+                {
+                    "status": "success",
+                    "message": "Course and program details retrieved successfully",
+                    "course": {
+                        "translated_course": course_translations,
+                        "short_description": course_run.short_description_override,
+                        "course_key": course.key,
+                        "course_lang": course_run.language.code if course_run.language else "en"
+                    },
+                    "programs": response_data
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except CourseRun.DoesNotExist:
+            return Response(
+                {
+                    "status": "fail",
+                    "message": f"No CourseRun found for key: {course_run_key}",
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {
+                    "status": "fail",
+                    "message": f"An error occurred: {str(e)}",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+
+
+class GetProgramCourseDetail(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        # URL - {Discovery}/extandedapi/getprogramcoursedetail/?course_id=course-v1%3AManprax%2Bmx_course_01%2B2024_01
+        course_run_key = request.GET.get('course_id')
+        
+        if not course_run_key:
+            return Response(
+                {
+                    "status": "fail",
+                    "message": "course_id is required",
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Fetch the CourseRun and its associated Course
+            course_run = CourseRun.objects.select_related('course').get(key=course_run_key)
+            course = course_run.course
+            
+            # Fetch programs related to the course
+            programs = Program.objects.filter(courses=course, status="active")
+            if not programs.exists():
+                return Response(
+                    {
+                        "status": "fail",
+                        "message": "No programs found for the given course_id",
+                    },
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            response_data = []
+            program_uuids = [str(program.uuid) for program in programs]
+            response_data = getProgramCourseDetail(program_uuids)
+        
+            
+            return Response(
+                {
+                    "status": "success",
+                    "message": "Course and program details retrieved successfully",
+                    "programs": response_data if response_data else []
+                },
+                status=status.HTTP_200_OK
+            )
+
+        except CourseRun.DoesNotExist:
+            return Response(
+                {
+                    "status": "fail",
+                    "message": f"No CourseRun found for key: {course_run_key}",
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {
+                    "status": "fail",
+                    "message": f"An error occurred: {str(e)}",
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+
+def getProgramCourseDetail(program_uuids):
+    try:
+        programs = Program.objects.filter(uuid__in=program_uuids)
+        # Get all available languages from MultiLingualDiscoveryTranslation
+        available_languages = MultiLingualDiscoveryTranslation.objects.values('language_code').distinct()
+        available_languages = [lang['language_code'] for lang in available_languages]
+
+        response_data = []
+        for program in programs:
+            # Fetch translated tags
+            tags_data = []
+            for tag in program.program_topics.all():
+                tag_translations = []
+                try:
+                    # Find translations by matching tag name and master_id
+                    tag_translation = MultiLingualDiscoveryTranslation.objects.filter(
+                        title=tag.name
+                    ).last()
+                    if tag_translation:
+                        for language in available_languages:
+                            try:
+                                translated_tag = MultiLingualDiscoveryTranslation.objects.filter(
+                                    master_id=tag_translation.master_id,
+                                    language_code=language
+                                ).first()
+                                if translated_tag and translated_tag.title not in tag_translations:
+                                    tag_translations.append(translated_tag.title)
+                            except TranslationDoesNotExist:
+                                continue
+                        if not tag_translations:  # Fallback to default
+                            tag_translations.append(tag_translation.title)
+                    else:
+                        tag_translations.append(tag.name)
+                except MultiLingualDiscoveryTranslation.DoesNotExist:
+                    tag_translations.append(tag.name)
+                tags_data.append({
+                    "name": tag.name,
+                    "tag_translations": tag_translations
+                })
+
+            # Fetch translated program data
+            program_translations = []
+            try:
+                # program_translation = MultiLingualDiscoveryTranslation.objects.filter(
+                #     master_id=program.id
+                # ).last()
+
+                program_translation = MultiLingualDiscovery.objects.filter(
+                                Q(content_type='Program') & Q(program_title__id=program.id)
+                            ).first()
+                
+                if program_translation:
+                    for language in available_languages:
+                        try:
+                            translated_program = MultiLingualDiscoveryTranslation.objects.filter(
+                                master_id=program_translation.id,
+                                language_code=language
+                            ).first()
+                            if translated_program and translated_program.title not in program_translations:
+                                program_translations.append(translated_program.title)
+                        except TranslationDoesNotExist:
+                            continue
+                    if not program_translations:  # Fallback to default
+                        program_translations.append(program_translation.title)
+                else:
+                    program_translations.append(program.title)
+            except MultiLingualDiscovery.DoesNotExist:
+                program_translations.append(program.title)
+
+            # Fetch subjects with translations
+            subjects_data = []
+            for subject in program.program_subjects.all():
+                subject_translations = []
+                try:
+                    subject_translation = subject.translations.first()
+                    if subject_translation:
+                        for language in available_languages:
+                            try:
+                                translated_subject = subject.translations.get(language_code=language)
+                                if translated_subject.name not in subject_translations:
+                                    subject_translations.append(translated_subject.name)
+                            except TranslationDoesNotExist:
+                                continue
+                        if not subject_translations:  # Fallback to default
+                            subject_translations.append(subject_translation.name)
+                    else:
+                        subject_translations.append(subject.name)
+                except AttributeError:
+                    subject_translations.append(subject.name)
+                subjects_data.append({
+                    "name": subject.name,
+                    "subject_translations": subject_translations
+                })
+
+            # Fetch courses related to the program
+            courses_data = []
+            for course in program.courses.all():
+                try:
+                    course_run = CourseRun.objects.filter(course=course).order_by('-start').first()
+                    if not course_run:
+                        log.warning(f"No CourseRun found for course {course.title} in program {program.uuid}")
+                        continue
+                    course_translations = []
+                    try:
+
+                        # course_translation = MultiLingualDiscoveryTranslation.objects.filter(
+                        #     master_id=course.id
+                        # ).last()
+
+                        course_translation = MultiLingualDiscovery.objects.filter(
+                                Q(content_type='Course') & Q(course_title__id=course.id)
+                            ).first()
+                        
+                        if course_translation:
+                            for language in available_languages:
+                                try:
+                                    translated_course = MultiLingualDiscoveryTranslation.objects.filter(
+                                        master_id=course_translation.id,
+                                        language_code=language
+                                    ).first()
+                                    if translated_course and translated_course.title not in course_translations:
+                                        course_translations.append(translated_course.title)
+                                
+                                except TranslationDoesNotExist:
+                                    continue
+                            if not course_translations:  # Fallback to default
+                                course_translations.append(course_translation.title)
+                        else:
+                            course_translations.append(course.title)
+                    except MultiLingualDiscovery.DoesNotExist:
+                        course_translations.append(course.title)
+                    courses_data.append({
+                        "course_title": course.title,
+                        "course_id": str(course_run.key),
+                        "translated_course": course_translations,
+                        "short_description": course_run.short_description_override or "",
+                    })
+                except Exception as e:
+                    log.error(f"Error processing course {course.title} for program {program.uuid}: {str(e)}")
+                    continue
+
+            program_lang_name = dict(settings.LANGUAGES).get(program.program_language, "English") if program.program_language else "English"
+
+            # Construct program response
+            program_data = {
+                "program_name": program.title,
+                "program_uuid": str(program.uuid),
+                "program_language": program.program_language or "en",
+                "program_lang_name": program_lang_name,
+                "authoring_org": program.authoring_organizations.first().name if program.authoring_organizations and program.authoring_organizations.first() else "",
+                "tags": tags_data,
+                "translated_program": program_translations,
+                "subjects": subjects_data,
+                "courses": courses_data,
+                "subtitle": program.subtitle or "",
+                "banner_image_url": program.banner_image.url,
+                # "card_image": program.card_image.card.url if program.card_image else "",
+                # "card_image_url": program.card_image_url or ""
+            }
+            response_data.append(program_data)
+        return response_data
+    except Exception as e:
+        log.error(f"Error in getProgramCourseDetail for UUIDs {program_uuids}: {str(e)}")
+        return []
