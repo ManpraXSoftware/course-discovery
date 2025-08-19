@@ -360,11 +360,12 @@ class MXCustomSearch(APIView):
             response.raise_for_status()  # Raise exception for bad status codes
             api_data = response.json()
         except requests.RequestException as e:
-            return Response({"error": f"Failed to fetch course data: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"count": 0,"next": None,"previous": None,"results": []}, status=status.HTTP_200_OK)
 
         # Ensure the response has the expected structure
         if api_data.get('status') != 'success':
-            return Response({"error": "Invalid API response"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"count": 0,"next": None,"previous": None,"results": []}, status=status.HTTP_200_OK)
+
 
         # Process the results
         results = api_data.get('results', [])
