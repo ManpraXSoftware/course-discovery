@@ -12,6 +12,11 @@ from itertools import chain
 import logging as log
 from django.db.models import Q
 from .serialializers import GetProgramCourseSerializer,GetCourseProgramSerializer
+import requests
+import os
+from django.http import JsonResponse  
+from django.views import View
+from django.utils import timezone
 import logging
 
 LANGUAGES = [
@@ -299,6 +304,97 @@ class CustomSearch(APIView):
         final_response["previous"] = content.data['previous'] if content.data['previous'] else None
         final_response["results"] = content.data['results']
         return Response(final_response,status=status.HTTP_200_OK)      
+
+
+
+
+class MXCustomSearch(APIView):
+    """
+    Custom search based on the courses.
+    URL = {}/extandedapi/mx-custom-course-search/?page=1&page_size=1&q=water
+    1. Query parameter (q).
+
+    2. Internal course_search api called to get the data.
+
+    3. After getting result appending program_details to the dict and returning in the following format.
+
+        final_response = {
+                "count" : total count of the dict,
+                "next" : next url,
+                "previous" : previous url,
+                "results" : dict type result
+            }
+    """
+    permission_classes = (IsAuthenticated,)
+    def get_program_details(self,course_key):
+        programs_dict = OrderedDict()
+        try:
+            course = Course.objects.get(key=course_key)
+            programs = Program.objects.filter(courses=course)
+            if programs:
+                programs_dict['programs'] = [program.title for program in programs]
+                programs_dict['program_id'] = [program.uuid for program in programs]
+                programs_dict['tags'] = [OrderedDict({
+                    "program_name":program.title,
+                    "program_id":program.uuid,
+                    "tags":[tags.name for tags in program.program_topics.all()] })for program in programs]
+              
+            return programs_dict
+        except Course.DoesNotExist:
+            programs_dict = None
+            return programs_dict
+
+    def get(self, request):
+        # Get query parameter 'q' from request
+        query = request.GET.get('q', '')
+        page_size = request.GET.get('page_size', '10')  
+        page = request.GET.get('page', '1')  
+        language = request.headers.get('Accept-Language', 'en')  # Default to 'en'
+        MX_SEARCH_BASE_URL = settings.MX_SEARCH_BASE_URL
+        # Call internal course search API
+        api_url = f"{MX_SEARCH_BASE_URL}/mx-search-course/?page_size={page_size}&page={page}&lang={language}&q={query}"
+        # api_url = f"{'https://d0f34319b8a3.ngrok-free.app/mx-search-course/'}?page_size={page_size}&page={page}&lang={language}&q={query}"
+        log.info("search API request via Mobile {}".format(api_url))
+        try:
+            response = requests.get(api_url)
+            response.raise_for_status()  # Raise exception for bad status codes
+            api_data = response.json()
+        except requests.RequestException as e:
+            return Response({"error": f"Failed to fetch course data: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Ensure the response has the expected structure
+        if api_data.get('status') != 'success':
+            return Response({"error": "Invalid API response"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Process the results
+        results = api_data.get('results', [])
+        for x in results:
+            programs_details = self.get_program_details(x['course_key'])
+            x['program_details'] = programs_details
+
+        # Generate next and previous URLs
+        current_page = api_data.get('page', 1)
+        total_pages = api_data.get('total_pages', 1)
+        base_url = request.build_absolute_uri('/extandedapi/mx-custom-course-search/')
+        next_url = None
+        previous_url = None
+
+        # Construct next URL if not on the last page
+        if current_page < total_pages:
+            next_url = f"{base_url}?page={current_page + 1}&page_size={page_size}&q={query}"
+
+        # Construct previous URL if not on the first page
+        if current_page > 1:
+            previous_url = f"{base_url}?page={current_page - 1}&page_size={page_size}&q={query}"
+
+        # Construct final response
+        final_response = OrderedDict()
+        final_response["count"] = len(results)
+        final_response["next"] = next_url
+        final_response["previous"] = previous_url
+        final_response["results"] = results
+
+        return Response(final_response, status=status.HTTP_200_OK)
 
 # Extract all programs and detials based on prorgrma uuid and extract the resume program data based on course block id
 class GetProgramTags(APIView):
@@ -898,14 +994,14 @@ class GetCourseDetail(APIView):
                                     translated_tag = MultiLingualDiscovery.objects.language(language).filter(
                                         Q(content_type='Tag') & Q(id=tag_translation.master.id)
                                     ).first()
-                                    if translated_tag:
+                                    if translated_tag and translated_tag.title not in tag_translations:
                                         tag_translations.append(translated_tag.title)
                                 except TranslationDoesNotExist:
                                     continue
                             if not tag_translations:  # Fallback to default
                                 tag_translations.append(tag_translation.title)
                     except MultiLingualDiscoveryTranslation.DoesNotExist:
-                        tag_translations.append(tag.name)
+                        tag.name not in tag_translations and tag_translations.append(tag.name)
                     tags_data.append({
                         "name": tag.name,
                         "tag_translations": tag_translations
@@ -922,12 +1018,12 @@ class GetCourseDetail(APIView):
                             translated_program = MultiLingualDiscovery.objects.language(language).filter(
                                 Q(content_type='Program') & Q(id=program_translation.master.id)
                             ).first()
-                            if translated_program:
+                            if translated_program and translated_program.title not in program_translations:
                                 program_translations.append(translated_program.title)
                         except TranslationDoesNotExist:
                             continue
                     if not program_translations:  # Fallback to default
-                        program_translations.append(program_translation.title)
+                        program_translation.title not in program_translations and program_translations.append(program_translation.title)
 
                 # Fetch subject names
                 subjects_data = []
@@ -938,7 +1034,7 @@ class GetCourseDetail(APIView):
                         for language in available_languages:
                             try:
                                 translated_subject = subject.translations.get(language_code=language)
-                                subject_translations.append(translated_subject.name)
+                                translated_subject.name not in subject_translations and subject_translations.append(translated_subject.name)
                             except TranslationDoesNotExist:
                                 continue
                         if not subject_translations:  # Fallback to default
@@ -960,7 +1056,7 @@ class GetCourseDetail(APIView):
                     "translated_program": program_translations
                 }
                 response_data.append(program_data)
-
+            
             # Fetch course translation
             course_translations = []
             course_translation = MultiLingualDiscoveryTranslation.objects.filter(
@@ -973,12 +1069,11 @@ class GetCourseDetail(APIView):
                             Q(content_type='Course') & Q(id=course_translation.master.id)
                         ).first()
                         if translated_course:
-                            course_translations.append(translated_course.title)
+                            translated_course.title not in course_translations and course_translations.append(translated_course.title)
                     except TranslationDoesNotExist:
                         continue
                 if not course_translations:  # Fallback to default
                     course_translations.append(course_translation.title)
-            # import pdb; pdb.set_trace()
             return Response(
                 {
                     "status": "success",
@@ -1109,9 +1204,11 @@ def getProgramCourseDetail(program_uuids):
                         if not tag_translations:  # Fallback to default
                             tag_translations.append(tag_translation.title)
                     else:
-                        tag_translations.append(tag.name)
+                        # tag_translations.append(tag.name)
+                        tag.name not in tag_translations and tag_translations.append(tag.name)
                 except MultiLingualDiscoveryTranslation.DoesNotExist:
-                    tag_translations.append(tag.name)
+                    # tag_translations.append(tag.name)
+                    tag.name not in tag_translations and tag_translations.append(tag.name)
                 tags_data.append({
                     "name": tag.name,
                     "tag_translations": tag_translations
@@ -1142,9 +1239,12 @@ def getProgramCourseDetail(program_uuids):
                     if not program_translations:  # Fallback to default
                         program_translations.append(program_translation.title)
                 else:
-                    program_translations.append(program.title)
+                    # program_translations.append(program.title)
+                    program.title not in program_translations and program_translations.append(program.title)
             except MultiLingualDiscovery.DoesNotExist:
-                program_translations.append(program.title)
+                # program_translations.append(program.title)
+                program.title not in program_translations and program_translations.append(program.title)
+
 
             # Fetch subjects with translations
             subjects_data = []
@@ -1163,9 +1263,12 @@ def getProgramCourseDetail(program_uuids):
                         if not subject_translations:  # Fallback to default
                             subject_translations.append(subject_translation.name)
                     else:
-                        subject_translations.append(subject.name)
+                        # subject_translations.append(subject.name)
+                        subject.name not in subject_translations and subject_translations.append(subject.name)
                 except AttributeError:
-                    subject_translations.append(subject.name)
+                    # subject_translations.append(subject.name)
+                    subject.name not in subject_translations and subject_translations.append(subject.name)
+
                 subjects_data.append({
                     "name": subject.name,
                     "subject_translations": subject_translations
@@ -1205,9 +1308,12 @@ def getProgramCourseDetail(program_uuids):
                             if not course_translations:  # Fallback to default
                                 course_translations.append(course_translation.title)
                         else:
-                            course_translations.append(course.title)
+                            # course_translations.append(course.title)
+                            course.title not in course_translations and course_translations.append(course.title)
                     except MultiLingualDiscovery.DoesNotExist:
-                        course_translations.append(course.title)
+                        # course_translations.append(course.title)
+                        course.title not in course_translations and course_translations.append(course.title)
+
                     courses_data.append({
                         "course_title": course.title,
                         "course_id": str(course_run.key),
@@ -1241,3 +1347,104 @@ def getProgramCourseDetail(program_uuids):
     except Exception as e:
         log.error(f"Error in getProgramCourseDetail for UUIDs {program_uuids}: {str(e)}")
         return []
+    
+
+
+from edx_elasticsearch_dsl_extensions.management.commands.mx_index_contents import Command as  MXReindexCommand
+
+
+
+class ReindexProgramByUIDView(View):
+    def get(self, request, uuid):
+        try:
+            # Check if the program exists
+            program = Program.objects.filter(uuid=uuid).first()
+            if not program:
+                log.error(f"No Program found with UUID: {uuid}")
+                return JsonResponse({"status": "error", "message": f"No Program found with UUID: {uuid}"}, status=404)
+
+            # Initialize reindex command
+            reindex_command = MXReindexCommand()
+            LMS_URL = getattr(settings, 'LMS_URL', "")
+            source_id = 'reindex_program_by_uid_view'
+            file_dir = '/'.join(os.path.dirname(__file__).split('/')[:4])
+
+            # Reindex the program
+            program_success = reindex_command.reindex_programs(
+                program_uuid=uuid,
+                batch_size=1,
+                file_dir=file_dir,
+                LMS_URL=LMS_URL,
+                source_id=source_id
+            )
+
+            # Get and validate course run keys using a for loop
+            course_keys = []
+            invalid_keys = []
+            today = timezone.now()
+            
+            for course in program.courses.all():
+                course_runs = CourseRun.objects.filter(course=course, start__lt=today, start__isnull=False)
+                for course_run in course_runs:
+                    if course_run.key:
+                        course_keys.append(course_run.key)
+                    else:
+                        invalid_keys.append(course_run.id)
+                        log.warning(f"CourseRun with ID {course_run.id} has no valid key")
+
+            # Reindex each course run individually
+            course_success = True
+            failed_keys = []
+            for key in course_keys:
+                try:
+                    # # Pass one course run key at a time
+                    success = reindex_command.reindex_courses(
+                        course_id=str(key),  
+                        batch_size=1,
+                        file_dir=file_dir,
+                        LMS_URL=LMS_URL,
+                        source_id=source_id
+                    )
+                    if not success:
+                        log.error(f"Failed to reindex course run with key: {key}")
+                        failed_keys.append(key)
+                        course_success = False
+                    else:
+                        log.info(f"Successfully reindexed course run with key: {key}")
+         
+                except Exception as e:
+                    log.error(f"Error in reindexing its course runs: {str(e)}")
+                    invalid_keys.append(key)
+                    course_success = False
+
+            if invalid_keys:
+                log.warning(f"Invalid or missing course run keys: {invalid_keys}")
+            if failed_keys:
+                log.warning(f"Failed to reindex course run keys: {failed_keys}")
+
+            # Combine results
+            if program_success and course_success:
+                log.info(f"Successfully triggered reindexing for program UUID: {uuid} and {len(course_keys)} course runs")
+                return JsonResponse({
+                    "status": "success",
+                    "message": f"Successfully triggered reindexing for program UUID: {uuid} and {len(course_keys)} course runs",
+                    "invalid_keys": invalid_keys,
+                    "failed_keys": failed_keys
+                }, status=202)
+            else:
+                log.error(f"Failed to trigger reindexing for program UUID: {uuid} or its course runs")
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"Failed to trigger reindexing for program UUID: {uuid} or its course runs",
+                    "invalid_keys": invalid_keys,
+                    "failed_keys": failed_keys
+                }, status=500)
+
+        except Exception as e:
+            log.error(f"Error in reindexing program UUID {uuid} or its course runs: {str(e)}")
+            return JsonResponse({
+                "status": "error",
+                "message": f"Error in reindexing program or course runs: {str(e)}",
+                "invalid_keys": invalid_keys if 'invalid_keys' in locals() else [],
+                "failed_keys": failed_keys if 'failed_keys' in locals() else []
+            }, status=500)

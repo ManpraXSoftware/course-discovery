@@ -26,6 +26,7 @@ urlpatterns = [
     path('getcoursedetail/',GetCourseDetail.as_view(),name='get_course_detail'),
     path('getprogramcoursedetail/',GetProgramCourseDetail.as_view(),name='get_program_detail'),
 
+    path('mx-custom-course-search/', MXCustomSearch.as_view(), name='mx_custom_course_search'),
 
 
 ]
