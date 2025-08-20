@@ -385,7 +385,7 @@ class ProgramAdmin(DjangoObjectActions, SimpleHistoryAdmin):
         'instructor_ordering', 'enrollment_count', 'recent_enrollment_count', 'credit_value',
         'program_topics','program_subjects'
     )
-    change_actions = ('refresh_program_skills', )
+    change_actions = ('refresh_program_skills', 'reindex_search')
 
     save_error = False
 
@@ -402,11 +402,18 @@ class ProgramAdmin(DjangoObjectActions, SimpleHistoryAdmin):
         """
         Returns the additional urls used by the custom object tools.
         """
+        from extandedapi.views import ReindexProgramByUIDView
         additional_urls = [
             re_path(
                 r"^([^/]+)/refresh_program_skills$",
                 self.admin_site.admin_view(RefreshProgramSkillsView.as_view()),
                 name=REFRESH_PROGRAM_SKILLS_URL_NAME
+            ),
+            # Add new URL for reindexing
+            re_path(
+                r"^([^/]+)/reindex_search$",
+                self.admin_site.admin_view(ReindexProgramByUIDView.as_view()),
+                name='reindex_program_search'
             ),
         ]
         return additional_urls + super().get_urls()
@@ -421,6 +428,13 @@ class ProgramAdmin(DjangoObjectActions, SimpleHistoryAdmin):
 
         return actions
 
+    def reindex_search(self, request, obj):
+        """
+        Object tool handler method - redirects to the ReindexProgramByUIDView
+        """
+        reindex_url = reverse('admin:reindex_program_search', args=(obj.uuid,))
+        return HttpResponseRedirect(reindex_url)
+    
     @admin.display(
         description=_('Included course runs')
     )

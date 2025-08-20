@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = 'Triggers reindexing of courses or programs in MX Search App'
-
+    # python manage.py mx_index_contents --index_type="course"
     def add_arguments(self, parser):
         parser.add_argument('--course_id', type=str, help='Specific course ID to reindex (optional)', default=None)
         parser.add_argument('--batch_size', type=int, help='Number of items per batch', default=50)
@@ -51,7 +51,15 @@ class Command(BaseCommand):
                 cache.set('update_mx_index_contents_status', False)
                 return False
         else:
-            course_runs = CourseRun.objects.filter(start__lt=today, start__isnull=False)
+            # course_runs = CourseRun.objects.filter(start__lt=today, start__isnull=False)
+            course_runs = (
+                    CourseRun.objects.filter(
+                        start__lt=today,
+                        start__isnull=False,
+                        course__programs__isnull=False
+                    )
+                    .distinct()
+                )
         items = [str(course_run.key) for course_run in course_runs]
         endpoint = 'mx_reindex_courses_batch'
         payload_key = "course_ids"

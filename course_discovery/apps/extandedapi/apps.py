@@ -6,4 +6,5 @@ class CourseScriptConfig(AppConfig):
     verbose_name = 'Extanded API'
 
     def ready(self):
-        from extandedapi import signals
+        # from extandedapi import signals
+        pass
