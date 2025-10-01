@@ -338,7 +338,7 @@ class MXCustomSearch(APIView):
                     "program_name":program.title,
                     "program_id":program.uuid,
                     "tags":[tags.name for tags in program.program_topics.all()] })for program in programs]
-              
+
             return programs_dict
         except Course.DoesNotExist:
             programs_dict = None
@@ -351,128 +351,72 @@ class MXCustomSearch(APIView):
         page = request.GET.get('page', '1')  
         language = request.headers.get('Accept-Language', 'en')  # Default to 'en'
         MX_SEARCH_BASE_URL = settings.MX_SEARCH_BASE_URL
+        LMS_URL = settings.LMS_URL
         # Call internal course search API
         # api_url = f"{MX_SEARCH_BASE_URL}/mx-search-course/?page_size={page_size}&page={page}&lang={language}&q={query}"
-        # log.info("search API request via Mobile {}".format(api_url))
-        # try:
-        #     response = requests.get(api_url)
-        #     response.raise_for_status()  # Raise exception for bad status codes
-        #     api_data = response.json()
-        # except requests.RequestException as e:
-        #     return Response({"count": 0,"next": None,"previous": None,"results": []}, status=status.HTTP_200_OK)
+        api_url = f"{MX_SEARCH_BASE_URL}/mx-search-course/?page_size={page_size}&page={page}&lang={language}&q={query}&skip_ai_filter=true"
+        log.info("search API request via Mobile {}".format(api_url))
+        try:
+            response = requests.get(api_url)
+            response.raise_for_status()  # Raise exception for bad status codes
+            api_data = response.json()
+        except requests.RequestException as e:
+            return Response({"count": 0,"next": None,"previous": None,"results": []}, status=status.HTTP_200_OK)
 
-        # # Ensure the response has the expected structure
-        # if api_data.get('status') != 'success':
-        #     return Response({"count": 0,"next": None,"previous": None,"results": []}, status=status.HTTP_200_OK)
+        # Ensure the response has the expected structure
+        if api_data.get('status') != 'success':
+            return Response({"count": 0,"next": None,"previous": None,"results": []}, status=status.HTTP_200_OK)
 
 
-        # # Process the results
-        # results = api_data.get('results', [])
-        # for x in results:
-        #     programs_details = self.get_program_details(x['course_key'])
-        #     x['program_details'] = programs_details
-        #     # x['unit_id'] = ""
-        #     # x['is_enroll'] = True
+        # Process the results
+        results = api_data.get('results', [])
+        username = request.user.username
+        for course in results:
+            program_details = self.get_program_details(course['course_key'])
+            course['program_details'] = program_details
+            course['is_enroll'] = False 
+            if program_details and 'program_id' in program_details:
+                for program_uuid in program_details['program_id']:
+                    check_program_url = (
+                        f"{LMS_URL}/explore-courses/get-program-enrollment/"
+                        f"?username={username}&program_uuid={program_uuid}"
+                    )
+                    try:
+                        resp = requests.get(check_program_url)
+                        resp.raise_for_status()
+                        data = resp.json()
 
-        # # Generate next and previous URLs
-        # current_page = api_data.get('page', 1)
-        # total_pages = api_data.get('total_pages', 1)
-        # base_url = request.build_absolute_uri('/extandedapi/mx-custom-course-search/')
-        # next_url = None
-        # previous_url = None
+                        # ✅ Fix: match your API shape
+                        if data.get("status") is True:
+                            if data.get("is_enrolled") == "enrolled":
+                                course['is_enroll'] = True
+                                break
+                    except requests.RequestException:
+                        pass
+        # Generate next and previous URLs
+        current_page = api_data.get('page', 1)
+        total_pages = api_data.get('total_pages', 1)
+        base_url = request.build_absolute_uri('/extandedapi/mx-custom-course-search/')
+        next_url = None
+        previous_url = None
 
-        # # Construct next URL if not on the last page
-        # if current_page < total_pages:
-        #     next_url = f"{base_url}?page={current_page + 1}&page_size={page_size}&q={query}"
+        # Construct next URL if not on the last page
+        if current_page < total_pages:
+            next_url = f"{base_url}?page={current_page + 1}&page_size={page_size}&q={query}"
 
-        # # Construct previous URL if not on the first page
-        # if current_page > 1:
-        #     previous_url = f"{base_url}?page={current_page - 1}&page_size={page_size}&q={query}"
+        # Construct previous URL if not on the first page
+        if current_page > 1:
+            previous_url = f"{base_url}?page={current_page - 1}&page_size={page_size}&q={query}"
 
-        mx_result = [
-        {
-            "course_id": "course-v1:VisionEmpower+VE_TIK_S_G3-20+2019",
-            "course_name": "Daily routine",
-            "course_key": "VisionEmpower+VE_TIK_S_G3-20",
-            "course_lang": "en",
-            "program_name": [
-                "Grade 3 Science (Teacher, Karnataka)"
-            ],
-            "subject": "Science",
-            "content_text": "Daily routine OVERVIEW 1.1 OBJECTIVE AND PREREQUISITES 1.1 OBJECTIVE AND PREREQUISITES 1.1 OBJECTIVE AND PREREQUISITES 1.1 OBJECTIVE AND PREREQUISITES 1.1 OBJECTIVE AND PREREQUISITES Objective To list down our daily routine To understand the inevitable conditions of some children who are forced to work To become aware about Right to Education and Child labour Prerequisite Concepts None LEARN 2.1 KEY POINTS 2.1 KEY POINTS 2.1 KEY POINTS 2.1 KEY POINTS 2.1 KEY POINTS Daily routine includes activities which we do on a daily basis mostly at the same time every day. Attending school regularly helps children to learn well. Most of the countries in the world ensure that children in their country are attending school and getting proper education by making laws. India, in 2010, passed Right to bill and made it the government's responsibility that every child gets free and compulsory education between age 6 and 14 years. The new Education Policy introduced in 2020 has expanded the age limit for compulsory education between 3 to 18 years.Education 2.2 LEARN MORE To learn more about Right to Education Act (RTE), follow the given link: http: righttoeducation.in/know-your-rte/about ENGAGE 3.1 INTEREST GENERATION ACTIVITY INTRODUCTION TO THE TOPIC Activity 1: How do you spend your day? * Activity 1: How do you spend your day? * Activity 1: How do you spend your day? * Materials Required: NA Prerequisite: NA Activity Flow: Start with a discussion about how they begin their day. Ask students to share about what are the different things or activities they did before reaching school. Do not stress upon the sequence of activities. Encourage students to find similarities and differences in the activities they did and compare them with their friends. Ask them to think about the reasons for the similarities and differences. 3.2 CONCEPT GENERATION ACTIVITY DAILY ROUTINE Activity 2: Unjumble the daily routine * Activity 2: Unjumble the daily routine * Activity 2: Unjumble the daily routine * Materials Required: NA Prerequisite: NA Activity Flow: Tell the following daily routine activities in the following jumbled sequence and ask students to unjumble them in the correct order. Narrate the following story: There is a boy called Ramu. The following are the activities he follows most of the days of a week. But the activities are not in order. Can you help arrange them in the order starting from morning till night? Ramu is going to school. Ramu is eating his lunch.Ramu is doing his homework.Ramu woke up in the morningRamu is eating his breakfast.Ramu is taking a bath.Ramu is brushing his teeth.Ramu is eating dinner with his family.Ramu is helping his mother to buy vegetables in the market.Ramu is cleaning his room and making his bed.Ramu is studying in the classroom.Ramu is playing with his friends. Help students to arrange the above routine in order. What is a daily routine? Explain that a daily routine includes the activities which we follow most of the days. Add that there are some activities that are done both during the day and night as well. For example, we brush our teeth Have a general discussion about the benefits of following a routine on a daily basis. Inform that having a fixed routine helps us to complete our work on time and that makes us feel good about ourselves and also gives us plenty of time to do other activities which we like to do. For example, playing a game with a family member or friend, reading or sharing stories and so on. Activity 3: Make a list of your daily routine (writing and reading) * Activity 3: Make a list of your daily routine (writing and reading) * Activity 3: Make a list of your daily routine (writing and reading) * Materials Required: writing materials Prerequisite: Comfortable writing sentences in braille Activity Flow: Ask students to make a list of daily routines that they follow on a regular school day. Once they complete writing, ask them to read out aloud what they have written. Ask them to compare the similarities and differences from each other. Encourage them to think if they would like to add or remove any activity from their daily routine. If yes, then allow them to share what it is and ask them to give reasons for that. Encourage them to write about the same in their sheet. RIGHT TO EDUCATION Activity 4: Story about missing school * Activity 4: Story about missing school * Activity 4: Story about missing school * Materials Required: NA Prerequisites: NA Activity Flow: Narrate the following story: Suma studies in class 3 and lives with her mother. Her mother is a vegetable seller and goes to the nearby market to sell vegetables. Every day, Suma goes to school with her friends who pass by her house on their way to school. But one day when Suma’s friends came to her house in the morning, they found Suma not wearing her school uniform. She was carrying the vegetable basket on her shoulder and is preparing to go to the market. Suma’s friends asked the reason for not going to school. Suma explained that her mother has fever and that is why she has to go to the market to sell the vegetables. Her friends wanted to know when she would be able to join the school again. Suma told them that as soon as her mother recovers from fever, she will be able to join school. After a few days, when Suma’s friends were passing by her house to school, Suma was waiting for them in school uniform and they all went to school together. Have a discussion by asking a few questions as suggested below: Who comes to Suma’s house to accompany her to school?Why was Suma not able to go to school?Guess what Suma would have missed in school that day?What are the various reasons for being absent from school?If any of your friends misses his class, how will you help him/her?What did you understand from this story? Discuss that every child has a right to education and the government has introduced the Right to Education act to ensure that every child in the country get free and compulsory education between the age 3 to 18 years. CHILD LABOUR Activity 5: What is Child Labour? * Activity 5: What is Child Labour? * Activity 5: What is Child Labour? * Materials Required: NA Prerequisites: NA Activity Flow: Have a discussion with students by asking if they have come across any child of their age or older, working in places like restaurants, hotels, as domestic help, small factories such as firework factories or selling objects like toys and flowers on roads especially in traffic signals. Discuss what could be the various reasons that would lead them to do such kind of work. What are the problems a child may face at workplaces like these? Explain that such children who are forced to work: Do not get access to school, learning and playing Miss proper education Their working conditions can be dangerous, for example, children who work in firework making factories can get life-threatening diseases They may have to face violence at workplace or may be punished by their ownersThere are possibilities of getting into bad habitsThey do not get sufficient amount of nutritious food on time Inform that the Government has enforced the Child Labour Prohibition Act. Children of school age are being identified and brought back to school. Efforts are made to provide good education to these children and people who engage these children for work, can get punished under the Act. 3.3 LET’S DISCUSS: RELATE TO DAILY LIFE 3.3 LET’S DISCUSS: RELATE TO DAILY LIFE 3.3 LET’S DISCUSS: RELATE TO DAILY LIFE 3.3 LET’S DISCUSS: RELATE TO DAILY LIFE 3.3 LET’S DISCUSS: RELATE TO DAILY LIFE Have a discussion about the following: Encourage students to think about what will happen if a child does not get the opportunity to go to school. Explain that attending school and classes regularly gives an opportunity for a learner to develop various skills such as reading, writing, problem solving, understanding self and others, learn science, dance, music, games and other things which may not be easily available outside school. Discuss what is the Right to Education Act and why it was created. EXERCISES & REINFORCEMENT 4.1 REINFORCEMENT 4.1 REINFORCEMENT Activity 6: Daily routine of other members (HW suggestion) Activity 6: Daily routine of other members (HW suggestion) Activity 6: Daily routine of other members (HW suggestion) Materials Required: NA Prerequisites: NA Activity Flow: Ask students to think about the daily routine of other members in their house. What is the daily routine of their caretaker, mother, father, grandparents, helpers, uncle or aunts? Have a discussion about this and find out which activities are similar and which are different. Discuss the need for having different routines for different members. (HW suggestion) The activity mentioned here can be given as homework. The discussion can follow in the next class. Teaching Tips NA References NA 4.2 IMPORTANT GUIDELINES 4.2 IMPORTANT GUIDELINES 4.2 IMPORTANT GUIDELINES 4.2 IMPORTANT GUIDELINES 4.2 IMPORTANT GUIDELINES Exercise Reading It is very important that the children practice their learnings as well as their reading. Hence have the children read out the newly learned concepts from their textbooks or other available resources. Perform Textbook Activity It is good practice to have the children perform the textbook activities. Your textbook activities might not be accessible hence go through this resource to learn how to make textbook content accessible. Provide Homework To evaluate their understanding and to help the student revise and implement the new learnt concept ensure to provide them with homework. Students should perform one or two of the questions mentioned above or from the textbook exercises with the teacher in class and the remaining may be given for homework. Also, ensure that the student knows their special skills linked to independently using their accessible books as it will be critical to doing homework independently. End of Document Karnataka state board, KA, grade 1, Science, EVS, a day in my life, daily routine, right to education, RTE, child labour, chapter 20 দৈনন্দিন রুটিন Daily routine दैनिक दिनचर्या ನನ್ನ ಒಂದು ದಿನ தினசரி வழக்கம் কর্ণাটক রাজ্য বোর্ড বিজ্ঞান শিক্ষক নির্দেশ কিটস Karnataka State Board Science Teacher Instruction Kits कर्नाटक राज्य बोर्ड विज्ञान शिक्षक निर्देश किट ಕರ್ನಾಟಕ ರಾಜ್ಯ ಮಂಡಳಿ ವಿಜ್ಞಾನ ಶಿಕ್ಷಕರ ಸೂಚನಾ ಕೈಪಿಡಿ (ಕಿಟ್‌ಗಳು) கர்நாடக மாநில வாரிய அறிவியல் ஆசிரியர் அறிவுறுத்தல் கருவிகள் Science அறிவியல் Grade 3 Science (Teacher, Karnataka)",
-            "tags": [
-                "Karnataka State Board Science Teacher Instruction Kits"
-            ],
-            "program_details": {
-                "programs": [
-                    "Grade 3 Science (Teacher, Karnataka)"
-                ],
-                "program_id": [
-                    "8965b1c4-7f60-436d-b8ed-47d8f30477e5"
-                ],
-                "tags": [
-                    {
-                        "program_name": "Grade 3 Science (Teacher, Karnataka)",
-                        "program_id": "8965b1c4-7f60-436d-b8ed-47d8f30477e5",
-                        "tags": [
-                            "Karnataka State Board Science Teacher Instruction Kits"
-                        ]
-                    }
-                ]
-            },
-            "unit_id": "block-v1:VisionEmpower+VE_TIK_S_G3-20+2019+type@vertical+block@8857ff9148e0487fb5e0cd5e08889309",
-            "is_enroll": False
-        },
-        {
-            "course_id": "course-v1:VisionEmpower+VE_TIK_S_G3-14+2019",
-            "course_name": "Modes of transport",
-            "course_key": "VisionEmpower+VE_TIK_S_G3-14",
-            "course_lang": "en",
-            "program_name": [
-                "Grade 3 Science (Teacher, Karnataka)"
-            ],
-            "subject": "Science",
-            "content_text": "Modes of transport OVERVIEW OBJECTIVE AND PREREQUISITES 1.1OBJECTIVE AND PREREQUISITES 1.1 OBJECTIVE AND PREREQUISITES 1.1 OBJECTIVE AND PREREQUISITES 1.1 OBJECTIVE AND PREREQUISITES Objective To identify the need for transportTo understand the different modes of transport for long distance, short distance and modern modes of transport To know about different kinds of workers working in railway station/bus station Prerequisite Concept Names of common vehiclesDifferent modes of transport EVS _Grade 2_Chapter 12_Travel LEARN KEY POINTS KEY POINTS 2.1 KEY POINTS 2.1 KEY POINTS 2.1 KEY POINTS A bus station is a structure where city or intercity buses stop to pick up and drop off passengers. While the term bus depot generally refers to a bus garage. A bus station is larger than a bus stop. A bus stop is a place on the roadside where buses can stop for our convenience. A train station or railway station is a place where passengers can get on and off trains and/or goods may be loaded or unloaded. To ensure all people get access to buses and trains, the government creates bus stations and railway stations at various points in a city. Bus stations and railway stations have chairs, waiting rooms, washrooms, signs giving directions, speakers making announcements, screens with information for people’s convenience. Different people have different jobs to maintain the bus and railway station and as a responsible citizen we have to ensure that we follow some rules to keep the places clean and safe for our use. Learn more: None ENGAGE INTEREST GENERATION ACTIVITY INTRODUCTION TO THE TOPIC Activity 1: Sing along poem on transport * Activity 1: Sing along poem on transport * Activity 1: Sing along poem on transport * Materials Required: NA Prerequisite: NA Activity Flow: Sing the below poem given below and ask students to repeat the lines. Picnic picnic by bus Along with my friends Variety of vehicles Moving on the road Horse cart and bullock cart Cycle and motorbike Autorickshaw and car So many vehicles on the road Train on the rail Boat on the water Aeroplane in the air Flying in the sky Some are moving slow Some are moving fast Different mode of transport I like them very much Ask children to name the vehicles that are there in the poem. CONCEPT GENERATION ACTIVITY IDENTIFYING VEHICLES Activity 2: Identify the vehicles * Activity 2: Identify the vehicles * Activity 2: Identify the vehicles * Materials Required: Models of different vehicles belonging to all the modes of transport (land, air, water) Prerequisite: NA Activity Flow: Pass around the different models to children and ask them to identify the names of the vehicles. Have a discussion about the mode of transport, what is the purpose of the vehicle, whether the vehicle moves fast like a train or slow like a bullock cart, who uses it and any other information that they can share about the vehicle. Discuss regarding the different sizes of different vehicles by giving examples. If possible, take help of a big and long flat wall or a corridor of the school with a starting point and different end points (approximate length) to help them understand the length of different vehicles. Activity 3: Listing down vehicle names (writing)* Activity 3: Listing down vehicle names (writing)* Activity 3: Listing down vehicle names (writing)* Materials Required: tools for writing Prerequisite: The student should have prior knowledge on the following Different modes of transport (water, land or air) with examplesNumber of people a vehicle can accommodateFast- and slow-moving vehiclesVehicles that can cover long and short distances Activity Flow: Discussion: Before starting the activity, have a general discussion about different situations in which different kinds of vehicles are used. For example, for crossing a river, a boat is used and if many people want to cross the river, small boats will not be sufficient. A bigger boat or a ship would be more suitable for such situations. Discuss about vehicles referring to the following parameters: distance between two places, goods that need to be transported, speed in terms of fast or slow, mode of transport, number of people travelling and the people whom we expect to meet in such places. Divide the class into groups making sure that every group has a child who is comfortable in reading and writing in Braille. Ask each group to make a list of vehicles they have travelled on and then write next to it if the vehicle is a fast-moving vehicle or a slow-moving vehicle. Help them with spellings if required. For example: Train – Fast, Cycle - Slow Ask every group to present their work to the class by reading out what they have written about the vehicles. WORKERS IN RAILWAY AND BUS STATION Text Text Activity 4: Visit to a railway station/bus station to know its structure, work and people Materials Required: NA Prerequisite: NA Activity Flow: Discussion: Before taking students to any bus/railway station, have a discussion regarding their own personal experience of using the bus or train. Discuss about the different areas in a station such as the ticket counters, waiting areas, washrooms or toilets, where and how people form queues and so on. Discuss about the areas which are safe to walk and areas which are not safe to walk on. Take students to a nearby bus station/railway station for a visit. Orient them to the different areas in the bus/railway stations. For example: Ticket counter Help desk Washroom Benches Information screens and their purpose Waiting area before boarding the vehicle Small food outlets Buses/trains and their destinations Different kinds of workers in the station Request in advance from the bus/train staff to have a small session with children. This session would include description of their jobs and roles. Also, request bus station staff to explain some of the rules to be followed in the station Do not litter and put garbage in the dustbin Stand in a line/queue Allow people to deboard (come out) from a bus or train first before entering the vehicle After coming back from the visit, discuss the following with the students: Ask them to share their observations and what are the new things they learnt during the visit Have a discussion regarding the similarities and differences between a bus station and a railway station. Alternatively, if a visit is not possible, have a verbal discussion about the different areas of a station, how the system functions and the safety rules to be followed in such places. Also, discuss the different people working in those places. Ask children to guess the work they do Person sitting at the “help desk” Coolie or porter Cleaner Bus driver Conductor Ticket collectors Person sitting at the ticket counter LET’S DISCUSS: RELATE TO DAILY LIFE LET’S DISCUSS: RELATE TO DAILY LIFE 3.3 LET’S DISCUSS: RELATE TO DAILY LIFE 3.3 LET’S DISCUSS: RELATE TO DAILY LIFE 3.3 LET’S DISCUSS: RELATE TO DAILY LIFE Different kinds of vehicles come under the category of transportation. Transport helps people to travel from one place to another place and it can also be used to transport goods from one place to another. Transportation can be private or public. Public transport can vary from buses to trains in which many people can travel at a time. Private transports are those which are owned by an individual. EXERCISES & REINFORCEMENT 4.1 REINFORCEMENT REINFORCEMENT Activity 5: Names of vehicles (fill in the blanks/reading/writing) * Activity 5: Names of vehicles (fill in the blanks/reading/writing) * Activity 5: Names of vehicles (fill in the blanks/reading/writing) * Materials Required: Writing materials, printed sheet of the paragraph in accessible format (Braille/Large Font/Accessible E-copy) Note: If print copy is not available, this exercise can be conducted orally. Prerequisite: NA Activity Flow: Ask students to read the following paragraph and fill in the blanks with a suitable vehicle name for each blank space. We use vehicles like ___________ and __________ to travel from one place to another place. People use vehicles like _____________ and _____________ to carry goods from one place to another place. _______________ is comfortable for long journeys. _______________ is useful to travel fast. _______________is used for travelling in deserts. It is called the ship of the desert. People use ________________ to cross rivers. Activity 6: Design a bus station/railway station Activity 6: Design a bus station/railway station Activity 6: Design a bus station/railway station Materials Required: NA Prerequisite: NA Activity Flow: Divide children into groups and ask them to discuss among themselves that if they were to design a bus station or a railway station, what kind of facilities they would like to have at the station and the reasons for those. Ask them to think about what are the difficulties they normally face in those places (if they have visited any) and suggest ways to solve those problems or difficulties. If they are unable to suggest a solution, they would discuss the problem with the whole class while sharing their design. Let them think about the rules that need to be followed at these places and how they will ensure that everyone follows these rules. Apart from the existing rules, students can think of some new rules which can be introduced such that these places can become more user friendly. Ask each group to share what they discussed. Ask other groups if anything can be added in the design presented. Teaching Tips None References None 4.2 IMPORTANT GUIDELINES IMPORTANT GUIDELINES 4.2 IMPORTANT GUIDELINES 4.2 IMPORTANT GUIDELINES 4.2 IMPORTANT GUIDELINES Exercise Reading It is very important that the children practice their learnings as well as their reading. Hence have the children read out the newly learned concepts from their textbooks or other available resources. Perform Textbook Activity It is good practice to have the children perform the textbook activities. Your textbook activities might not be accessible hence go through this resource to learn how to make textbook content accessible. Provide Homework To evaluate their understanding and to help the student revise and implement the new learnt concept ensure to provide them with homework. Students should perform one or two of the questions mentioned above or from the textbook exercises with the teacher in class and the remaining may be given for homework. Also, ensure that the student knows their special skills linked to independently using their accessible books as it will be critical to doing homework independently. End of Document Karnataka state board, KA, I, Science, EVS, modes of transport, transport, travel, air transport, water transport, land transport, names of vehicles পরিবহন মোড Modes of transport परिवहन के मोड ಸಾರಿಗೆ ಸಂಚಾರ போக்குவரத்து முறைகள் কর্ণাটক রাজ্য বোর্ড বিজ্ঞান শিক্ষক নির্দেশ কিটস Karnataka State Board Science Teacher Instruction Kits कर्नाटक राज्य बोर्ड विज्ञान शिक्षक निर्देश किट ಕರ್ನಾಟಕ ರಾಜ್ಯ ಮಂಡಳಿ ವಿಜ್ಞಾನ ಶಿಕ್ಷಕರ ಸೂಚನಾ ಕೈಪಿಡಿ (ಕಿಟ್‌ಗಳು) கர்நாடக மாநில வாரிய அறிவியல் ஆசிரியர் அறிவுறுத்தல் கருவிகள் Science அறிவியல் Grade 3 Science (Teacher, Karnataka)",
-            "tags": [
-                "Karnataka State Board Science Teacher Instruction Kits"
-            ],
-            "program_details": {
-                "programs": [
-                    "Grade 3 Science (Teacher, Karnataka)"
-                ],
-                "program_id": [
-                    "8965b1c4-7f60-436d-b8ed-47d8f30477e5"
-                ],
-                "tags": [
-                    {
-                        "program_name": "Grade 3 Science (Teacher, Karnataka)",
-                        "program_id": "8965b1c4-7f60-436d-b8ed-47d8f30477e5",
-                        "tags": [
-                            "Karnataka State Board Science Teacher Instruction Kits"
-                        ]
-                    }
-                ]
-            },
-            "unit_id": "block-v1:VisionEmpower+VE_TIK_S_G3-14+2019+type@vertical+block@bb3830fae1814599b557fb36e14e1f33",
-            "is_enroll": True
-
-        },]
-
-        data = {
-            "count": 4,
-            "next": None,
-            "previous": None,
-            "results":mx_result
-        }
+        # 
         # Construct final response
-        # final_response = OrderedDict()
-        # final_response["count"] = len(results)
-        # final_response["next"] = next_url
-        # final_response["previous"] = previous_url
-        # final_response["results"] = results
+        final_response = OrderedDict()
+        final_response["count"] = len(results)
+        final_response["next"] = next_url
+        final_response["previous"] = previous_url
+        final_response["results"] = results
 
-        # return Response(final_response, status=status.HTTP_200_OK)
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(final_response, status=status.HTTP_200_OK)
 
 # Extract all programs and detials based on prorgrma uuid and extract the resume program data based on course block id
 class GetProgramTags(APIView):
