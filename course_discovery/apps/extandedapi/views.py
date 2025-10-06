@@ -354,7 +354,8 @@ class MXCustomSearch(APIView):
         LMS_URL = settings.LMS_URL
         # Call internal course search API
         # api_url = f"{MX_SEARCH_BASE_URL}/mx-search-course/?page_size={page_size}&page={page}&lang={language}&q={query}"
-        api_url = f"{MX_SEARCH_BASE_URL}/mx-search-course/?page_size={page_size}&page={page}&lang={language}&q={query}&skip_ai_filter=true"
+        # api_url = f"{MX_SEARCH_BASE_URL}/mx-search-course/?page_size={page_size}&page={page}&lang={language}&q={query}&skip_ai_filter=true"
+        api_url = f"{MX_SEARCH_BASE_URL}/mx-search-course/?page_size={page_size}&page={page}&lang={language}&q={query}"
         log.info("search API request via Mobile {}".format(api_url))
         try:
             response = requests.get(api_url)
