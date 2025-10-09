@@ -27,7 +27,8 @@ class OrganizationViewSet(CompressedCacheResponseMixin, viewsets.ReadOnlyModelVi
     def get_queryset(self):
         user = self.request.user
         partner = self.request.site.partner
-
+        # Manprax
+        return serializers.OrganizationSerializer.prefetch_queryset(partner=partner)
         if user.is_staff:
             return serializers.OrganizationSerializer.prefetch_queryset(partner=partner)
         else:
