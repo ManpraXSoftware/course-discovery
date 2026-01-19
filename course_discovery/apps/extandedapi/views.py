@@ -326,18 +326,81 @@ class MXCustomSearch(APIView):
             }
     """
     permission_classes = (IsAuthenticated,)
-    def get_program_details(self,course_key):
+
+    def get_translated_title(self, content_type, related_obj, language):
+        """
+        Helper to get translated title for program or course.
+        Falls back to English, then original.
+        """
+        # Adjust content_type for course_run if necessary
+        
+        try:
+            fk_field = f'{content_type}_title_id'
+            master = MultiLingualDiscovery.objects.filter(
+                content_type=content_type,
+                **{fk_field: related_obj.id}
+            ).last()
+            if master:
+                try:
+                    translated = master.get_translation(language)
+                    return translated.title
+                except TranslationDoesNotExist:
+                    # Fallback to master's default title (assuming English)
+                    return master.title or related_obj.title
+            return related_obj.title
+        except Exception:
+            return related_obj.title
+
+    def get_translated_tag(self, tag_name, language):
+        """
+        Helper to get translated tag name.
+        Falls back to English/master, then original.
+        """
+        try:
+            tag_translation = MultiLingualDiscoveryTranslation.objects.filter(title=tag_name).last()
+            if tag_translation:
+                try:
+                    translated_tag = MultiLingualDiscoveryTranslation.objects.filter(
+                        master_id=tag_translation.master_id,
+                        language_code=language
+                    ).first()
+                    if translated_tag:
+                        return translated_tag.title
+                    else:
+                        # Fallback to the found translation (assuming English)
+                        return tag_translation.title
+                except Exception:
+                    return tag_name
+            return tag_name
+        except Exception:
+            return tag_name
+
+    def get_program_details(self, course_key, language):
         programs_dict = OrderedDict()
         try:
             course = Course.objects.get(key=course_key)
             programs = Program.objects.filter(courses=course)
             if programs:
-                programs_dict['programs'] = [program.title for program in programs]
-                programs_dict['program_id'] = [program.uuid for program in programs]
-                programs_dict['tags'] = [OrderedDict({
-                    "program_name":program.title,
-                    "program_id":program.uuid,
-                    "tags":[tags.name for tags in program.program_topics.all()] })for program in programs]
+                translated_titles = []
+                program_uuids = []
+                translated_tags_list = []
+                for program in programs:
+                    trans_title = self.get_translated_title('program', program, language)
+                    translated_titles.append(trans_title)
+                    program_uuids.append(program.uuid)
+                    trans_tags = [
+                        self.get_translated_tag(tag.name, language)
+                        for tag in program.program_topics.all()
+                    ]
+                    translated_tags_list.append(OrderedDict({
+                        "program_name": trans_title,
+                        "program_id": program.uuid,
+                        "tags": trans_tags
+                    }))
+
+                programs_dict['programs'] = translated_titles
+                programs_dict['program_id'] = program_uuids
+                programs_dict['tags'] = translated_tags_list
 
             return programs_dict
         except Course.DoesNotExist:
@@ -352,9 +415,10 @@ class MXCustomSearch(APIView):
         language = request.headers.get('Accept-Language', 'en')  # Default to 'en'
         MX_SEARCH_BASE_URL = settings.MX_SEARCH_BASE_URL
         LMS_URL = settings.LMS_URL
+
+        # language = 'en'  
+
         # Call internal course search API
-        # api_url = f"{MX_SEARCH_BASE_URL}/mx-search-course/?page_size={page_size}&page={page}&lang={language}&q={query}"
-        # api_url = f"{MX_SEARCH_BASE_URL}/mx-search-course/?page_size={page_size}&page={page}&lang={language}&q={query}&skip_ai_filter=true"
         api_url = f"{MX_SEARCH_BASE_URL}/mx-search-course/?page_size={page_size}&page={page}&lang={language}&q={query}"
         log.info("search API request via Mobile {}".format(api_url))
         try:
@@ -368,12 +432,23 @@ class MXCustomSearch(APIView):
         if api_data.get('status') != 'success':
             return Response({"count": 0,"next": None,"previous": None,"results": []}, status=status.HTTP_200_OK)
 
-
         # Process the results
         results = api_data.get('results', [])
         username = request.user.username
         for course in results:
-            program_details = self.get_program_details(course['course_key'])
+
+        # Translate course name
+            try:
+                # import pdb; pdb.set_trace()
+
+                course_run = CourseRun.objects.get(key=course['course_id'])
+
+                course['course_name'] = self.get_translated_title('course', course_run, language)
+            except CourseRun.DoesNotExist:
+                # Keep original if no translation or course not found
+                pass
+
+            program_details = self.get_program_details(course['course_key'], language)
             course['program_details'] = program_details
             course['is_enroll'] = False 
             if program_details and 'program_id' in program_details:
