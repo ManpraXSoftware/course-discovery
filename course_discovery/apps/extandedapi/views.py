@@ -1450,8 +1450,6 @@ def getProgramCourseDetail(program_uuids):
 
 from edx_elasticsearch_dsl_extensions.management.commands.mx_index_contents import Command as  MXReindexCommand
 
-
-
 class ReindexProgramByUIDView(View):
     def get(self, request, uuid):
         try:
@@ -1466,15 +1464,6 @@ class ReindexProgramByUIDView(View):
             LMS_URL = getattr(settings, 'LMS_URL', "")
             source_id = 'reindex_program_by_uid_view'
             file_dir = '/'.join(os.path.dirname(__file__).split('/')[:4])
-
-            # Reindex the program
-            # program_success = reindex_command.reindex_programs(
-            #     program_uuid=uuid,
-            #     batch_size=1,
-            #     file_dir=file_dir,
-            #     LMS_URL=LMS_URL,
-            #     source_id=source_id
-            # )
 
             # Get and validate course run keys using a for loop
             course_keys = []
@@ -1521,28 +1510,28 @@ class ReindexProgramByUIDView(View):
                 log.warning(f"Failed to reindex course run keys: {failed_keys}")
 
             # Combine results
-            # if program_success and course_success:
-            #     log.info(f"Successfully triggered reindexing for program UUID: {uuid} and {len(course_keys)} course runs")
-            #     return JsonResponse({
-            #         "status": "success",
-            #         "message": f"Successfully triggered reindexing for program UUID: {uuid} and {len(course_keys)} course runs",
-            #         "invalid_keys": invalid_keys,
-            #         "failed_keys": failed_keys
-            #     }, status=202)
-            # else:
-            #     log.error(f"Failed to trigger reindexing for program UUID: {uuid} or its course runs")
-            #     return JsonResponse({
-            #         "status": "error",
-            #         "message": f"Failed to trigger reindexing for program UUID: {uuid} or its course runs",
-            #         "invalid_keys": invalid_keys,
-            #         "failed_keys": failed_keys
-            #     }, status=500)
+            if course_success:
+                log.info(f"Successfully triggered reindexing for program UUID: {uuid} with {len(course_keys)} courses")
+                return JsonResponse({
+                    "status": "success",
+                    "message": f"Successfully triggered reindexing for program UUID: {uuid} with {len(course_keys)} courses",
+                    "invalid_keys": invalid_keys,
+                    "failed_keys": failed_keys
+                }, status=202)
+            else:
+                log.error(f"Failed to trigger reindexing for program UUID: {uuid} ")
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"Failed to trigger reindexing for program UUID: {uuid}",
+                    "invalid_keys": invalid_keys,
+                    "failed_keys": failed_keys
+                }, status=500)
 
         except Exception as e:
-            log.error(f"Error in reindexing program UUID {uuid} or its course runs: {str(e)}")
+            log.error(f"Error in reindexing program UUID {uuid} : {str(e)}")
             return JsonResponse({
                 "status": "error",
-                "message": f"Error in reindexing program or course runs: {str(e)}",
+                "message": f"Error in reindexing program : {str(e)}",
                 "invalid_keys": invalid_keys if 'invalid_keys' in locals() else [],
                 "failed_keys": failed_keys if 'failed_keys' in locals() else []
             }, status=500)

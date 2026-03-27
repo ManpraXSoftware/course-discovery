@@ -88,56 +88,6 @@ class Command(BaseCommand):
                 all_success = False
         return all_success
 
-    # def reindex_programs(self, program_uuid, batch_size, file_dir, LMS_URL, source_id):
-    #     if program_uuid:
-    #         programs = Program.objects.filter(uuid=program_uuid)
-    #         if not programs.exists():
-    #             logger.error(f"No Program found with UUID: {program_uuid}")
-    #             self.stdout.write(self.style.ERROR(f"No Program found with UUID: {program_uuid}"))
-    #             self.update_json_status(False, file_dir)
-    #             cache.set('update_mx_index_contents_status', False)
-    #             return False
-    #     else:
-    #         programs = Program.objects.filter(status='active') 
-    #     endpoint = 'mx_reindex_programs_batch'
-    #     payload_key = "programs"
-    #     all_success = True
-
-    #     for i in range(0, len(programs), batch_size):
-    #         batch = [str(program.uuid) for program in programs[i:i + batch_size]]
-    #         try:
-    #             program_details = getProgramCourseDetail(batch)
-    #             if not program_details:
-    #                 logger.error(f"No program details retrieved for batch: {batch}")
-    #                 self.stdout.write(self.style.ERROR(f"No program details retrieved for batch"))
-    #                 all_success = False
-    #                 continue
-    #             payload = {payload_key: program_details}
-    #         except Exception as e:
-    #             logger.error(f"Failed to get program details for batch {batch}: {str(e)}")
-    #             self.stdout.write(self.style.ERROR(f"Failed to get program details for batch: {str(e)}"))
-    #             all_success = False
-    #             continue
-    #         try:
-    #             logger.info(f"Triggering reindex for batch of {len(batch)} programs")
-    #             response = requests.post(
-    #                 f'{LMS_URL}/explore-courses/api/v1/{endpoint}/',
-    #                 json=payload,
-    #                 timeout=120
-    #             )
-    #             if response.status_code == 202:
-    #                 logger.info(f"Successfully triggered reindexing for program batch {len(batch)} from {source_id}")
-    #                 self.stdout.write(self.style.SUCCESS(f"Successfully triggered reindexing for program batch {len(batch)}"))
-    #             else:
-    #                 logger.error(f"Failed to trigger reindexing for program batch: Status {response.status_code}, Response {response.text}")
-    #                 self.stdout.write(self.style.ERROR(f"Failed to trigger reindexing for program batch: Status {response.status_code}"))
-    #                 all_success = False
-    #         except requests.RequestException as e:
-    #             logger.error(f"Failed to call reindex API for program batch: {str(e)}")
-    #             self.stdout.write(self.style.ERROR(f"Failed to call reindex API for program batch: {str(e)}"))
-    #             all_success = False
-    #     return all_success
-
     def handle(self, *args, **options):
         course_id = options['course_id']
         batch_size = options['batch_size']
