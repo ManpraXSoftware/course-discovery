@@ -88,6 +88,34 @@ class Command(BaseCommand):
                 all_success = False
         return all_success
 
+    def cleanup_stale_courses(self):
+        MX_SEARCH_BASE_URL = getattr(settings, 'MX_SEARCH_BASE_URL', "")
+        try:
+            stale_keys = list(
+                CourseRun.objects.filter(course__programs__isnull=True)
+                .values_list('course__key', flat=True)
+                .distinct()
+            )
+            if not stale_keys:
+                logger.info("No stale courses found to clean up.")
+                return
+            logger.info(f"Found {len(stale_keys)} stale course_keys to delete from index: {stale_keys}")
+            response = requests.post(
+                f'{MX_SEARCH_BASE_URL}/api/delete_courses_batch/',
+                json={"course_keys": stale_keys},
+                timeout=60
+            )
+            if response.status_code == 200:
+                deleted = response.json().get("deleted", 0)
+                logger.info(f"Cleanup deleted {deleted} stale documents from index.")
+                self.stdout.write(self.style.SUCCESS(f"Cleanup: deleted {deleted} stale ES documents for {len(stale_keys)} course_keys"))
+            else:
+                logger.error(f"Cleanup failed: Status {response.status_code}, Response {response.text}")
+                self.stdout.write(self.style.ERROR(f"Cleanup failed: Status {response.status_code}"))
+        except Exception as e:
+            logger.error(f"Error in cleanup_stale_courses: {str(e)}")
+            self.stdout.write(self.style.ERROR(f"Cleanup error: {str(e)}"))
+
     def handle(self, *args, **options):
         course_id = options['course_id']
         batch_size = options['batch_size']
@@ -119,3 +147,5 @@ class Command(BaseCommand):
             self.update_json_status(False, file_dir)
             cache.set('update_mx_index_contents_status', False)
             self.stdout.write(self.style.ERROR(f"Indexing Run Failed for one or more types: {', '.join(types_to_index)}"))
+
+        self.cleanup_stale_courses()

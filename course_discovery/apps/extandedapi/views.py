@@ -1509,6 +1509,8 @@ class ReindexProgramByUIDView(View):
             if failed_keys:
                 log.warning(f"Failed to reindex course run keys: {failed_keys}")
 
+            reindex_command.cleanup_stale_courses()
+
             # Combine results
             if course_success:
                 log.info(f"Successfully triggered reindexing for program UUID: {uuid} with {len(course_keys)} courses")
