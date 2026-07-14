@@ -999,7 +999,8 @@ class Getdetaillangbased(APIView):
                 param.update({
                     "program_title": program_title,
                     "program_banner_url": program.banner_image.url,
-                    "org_name": org_name
+                    "org_name": org_name,
+                    "program_overview": program.overview
                 })
             except Exception as e:
                 log.error(f"An error occurred: {e}")
