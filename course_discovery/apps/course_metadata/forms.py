@@ -8,6 +8,9 @@ from course_discovery.apps.course_metadata.models import Course, CourseRun, Path
 from course_discovery.apps.course_metadata.widgets import SortedModelSelect2Multiple
 
 
+PROGRAM_OVERVIEW_MAX_LENGTH = 750
+
+
 class ProgramAdminForm(forms.ModelForm):
     class Meta:
         model = Program
@@ -53,6 +56,9 @@ class ProgramAdminForm(forms.ModelForm):
         self.fields['courses'].required = False
         if self.fields.get('product_source'):
             self.fields['product_source'].required = True
+        self.fields['overview'].help_text = (
+            f'Maximum {PROGRAM_OVERVIEW_MAX_LENGTH} characters.'
+        )
 
     def clean(self):
 
@@ -88,6 +94,17 @@ class ProgramAdminForm(forms.ModelForm):
             raise ValidationError(error_message)
 
         return authoring_organizations
+
+    def clean_overview(self):
+        overview = self.cleaned_data.get('overview') or ''
+
+        if len(overview) > PROGRAM_OVERVIEW_MAX_LENGTH:
+            raise ValidationError(
+                f'Overview cannot exceed {PROGRAM_OVERVIEW_MAX_LENGTH} characters '
+                f'(currently {len(overview)}).'
+            )
+
+        return overview
 
 
 class CourseRunSelectionForm(forms.ModelForm):
