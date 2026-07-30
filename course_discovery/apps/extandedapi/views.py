@@ -435,6 +435,8 @@ class MXCustomSearch(APIView):
         # Process the results
         results = api_data.get('results', [])
         username = request.user.username
+        log.info("Username from request {}".format(username))
+
         for course in results:
 
         # Translate course name
