@@ -434,8 +434,12 @@ class MXCustomSearch(APIView):
 
         # Process the results
         results = api_data.get('results', [])
-        username = request.user.username
-        log.info("Username from request {}".format(username))
+        username = request.GET.get('username')
+        if username:
+            log.info("Username picked from query param: {}".format(username))
+        else:
+            username = request.user.username
+            log.info("Username picked from token: {}".format(username))
 
         for course in results:
 
