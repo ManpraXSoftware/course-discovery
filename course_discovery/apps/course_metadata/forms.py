@@ -2,6 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms.utils import ErrorList
 from django.utils.translation import gettext_lazy as _
+from slugify import slugify
 
 from course_discovery.apps.course_metadata.choices import ProgramStatus
 from course_discovery.apps.course_metadata.models import Course, CourseRun, Pathway, Program
@@ -73,6 +74,29 @@ class ProgramAdminForm(forms.ModelForm):
             ))
 
         return self.cleaned_data
+
+    def clean_marketing_slug(self):
+        marketing_slug = self.cleaned_data.get('marketing_slug')
+
+        if not marketing_slug:
+            title = self.cleaned_data.get('title') or self.instance.title
+            program_type = self.cleaned_data.get('type') or self.instance.type
+            organizations = self.cleaned_data.get('authoring_organizations')
+            organization = organizations[0] if organizations else None
+
+            if program_type and organization:
+                base_slug = f'{program_type.slug}/{organization.slug}-{slugify(title)}'
+            else:
+                base_slug = slugify(title)
+
+            marketing_slug = base_slug
+            suffix = 1
+
+            while Program.objects.filter(marketing_slug=marketing_slug).exclude(pk=self.instance.pk).exists():
+                marketing_slug = f'{base_slug}-{suffix}'
+                suffix += 1
+
+        return marketing_slug
 
     def clean_authoring_organizations(self):
         """
