@@ -11,7 +11,7 @@ from course_discovery.apps.edx_elasticsearch_dsl_extensions.serializers import B
 
 from ..constants import BASE_PROGRAM_FIELDS, BASE_SEARCH_INDEX_FIELDS, COMMON_IGNORED_FIELDS
 from ..documents import ProgramDocument
-from .common import DocumentDSLSerializerMixin
+from .common import BatchModelObjectListSerializer, DocumentDSLSerializerMixin
 from course_discovery.apps.course_metadata.models import Program
 from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery
 
@@ -118,3 +118,12 @@ class ProgramSearchModelSerializer(DocumentDSLSerializerMixin, ContentTypeSerial
 
         document = ProgramDocument
         fields = ContentTypeSerializer.Meta.fields + ProgramSerializer.Meta.fields
+        list_serializer_class = BatchModelObjectListSerializer
+
+    def get_model_object_by_instances(self, instances):
+        # Reuse ProgramSerializer's own select_related/prefetch_related so the
+        # batched reload doesn't re-trigger N+1 queries for nested fields
+        # (courses, authoring_organizations, curricula, etc.).
+        pks = [instance.pk for instance in (instances if isinstance(instances, list) else [instances])]
+        partner = self.context['request'].site.partner
+        return ProgramSerializer.prefetch_queryset(partner=partner).filter(pk__in=pks)

@@ -3,6 +3,7 @@ import logging
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils.dateparse import parse_datetime
 from django_elasticsearch_dsl.registries import registry
+from rest_framework.serializers import ListSerializer
 
 from course_discovery.apps.core.utils import ElasticsearchUtils, serialize_datetime
 
@@ -78,4 +79,27 @@ class DocumentDSLSerializerMixin(ModelObjectDocumentSerializerMixin):
 
     def to_representation(self, instance):
         _object = self.get_model_object_by_instances(instance).get()
-        return super().to_representation(_object)
+        return self.to_representation_from_object(_object)
+
+    def to_representation_from_object(self, obj):
+        """Serialize an already-fetched model object, skipping the per-instance DB reload."""
+        return super(DocumentDSLSerializerMixin, self).to_representation(obj)
+
+
+class BatchModelObjectListSerializer(ListSerializer):
+    """
+    List serializer for `DocumentDSLSerializerMixin` subclasses that reloads all
+    ES hits in a page with a single DB query, instead of one query per row.
+
+    Opt in via `Meta.list_serializer_class` on the child serializer.
+    """
+
+    def to_representation(self, data):
+        hits = list(data.all() if hasattr(data, 'all') else data)
+        if not hits:
+            return []
+        objects_by_pk = {obj.pk: obj for obj in self.child.get_model_object_by_instances(hits)}
+        return [
+            self.child.to_representation_from_object(objects_by_pk[hit.pk])
+            for hit in hits if hit.pk in objects_by_pk
+        ]
