@@ -2,8 +2,12 @@ from rest_framework.response import Response
 from django.conf import settings
 from elasticsearch import Elasticsearch
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from django.core.management import call_command
+from threading import Thread
 from course_discovery.apps.course_metadata.models import Program, Course, CourseRun, SubjectTranslation, Organization, Subject
+from course_discovery.apps.course_metadata.data_loaders.api import CoursesApiDataLoader
+from course_discovery.apps.core.models import Partner
 from course_discovery.apps.api.v1.views.search import CourseSearchViewSet
 from course_discovery.apps.mx_multilingual_discovery.models import MultiLingualDiscovery,MultiLingualDiscoveryTranslation
 from rest_framework import status
@@ -1456,6 +1460,181 @@ def getProgramCourseDetail(program_uuids):
 
 
 from edx_elasticsearch_dsl_extensions.management.commands.mx_index_contents import Command as  MXReindexCommand
+
+class UpdateProgramCourses(APIView):
+    """
+    Add or remove one or more courses from an existing program.
+
+    POST body:
+    {
+        "program_uuid": "<program uuid>",
+        "course_ids": ["<course run key>", ...],
+        "action": "add" | "remove"
+    }
+    """
+    permission_classes = (IsAdminUser,)
+
+    def post(self, request):
+        program_uuid = request.data.get('program_uuid')
+        course_ids = request.data.get('course_ids')
+        action = request.data.get('action')
+
+        if not program_uuid or not course_ids or action not in ('add', 'remove'):
+            return Response(
+                {
+                    'status': 'fail',
+                    'message': "program_uuid, course_ids and a valid action ('add' or 'remove') are required",
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if isinstance(course_ids, str):
+            course_ids = [course_ids]
+
+        program = Program.objects.filter(uuid=program_uuid).first()
+
+        if program is None:
+            return Response(
+                {'status': 'fail', 'message': f'Program not found for uuid: {program_uuid}'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        try:
+            results = []
+            for course_id in course_ids:
+                course_run = CourseRun.objects.filter(key=course_id).first()
+                if course_run is None:
+                    results.append({'course_id': course_id, 'status': 'fail', 'message': 'Course not found'})
+                    continue
+
+                course = course_run.course
+                already_associated = program.courses.filter(id=course.id).exists()
+
+                if action == 'add':
+                    if already_associated:
+                        results.append({'course_id': course_id, 'status': 'success', 'message': 'Course already associated with program'})
+                    else:
+                        program.courses.add(course)
+                        results.append({'course_id': course_id, 'status': 'success', 'message': 'Course added to program'})
+                else:
+                    if not already_associated:
+                        results.append({'course_id': course_id, 'status': 'success', 'message': 'Course not associated with program'})
+                    else:
+                        program.courses.remove(course)
+                        results.append({'course_id': course_id, 'status': 'success', 'message': 'Course removed from program'})
+
+            return Response(
+                {'status': 'success', 'program_uuid': str(program.uuid), 'results': results},
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            log.error(f"Error updating program courses for program {program_uuid}: {str(e)}")
+            return Response(
+                {'status': 'fail', 'message': 'An error occurred while updating program courses'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+def _run_update_index_and_cleanup():
+    try:
+        call_command('update_index', disable_change_limit=True)
+        call_command('remove_unused_indexes')
+    except Exception as e:
+        log.error(f"update_index/remove_unused_indexes background run failed: {str(e)}")
+
+
+class UpdateIndexView(APIView):
+    """
+    Rebuild the search index and then clean up now-unused old indexes.
+    Runs `update_index --disable-change-limit` followed by
+    `remove_unused_indexes` in a background thread so the request returns
+    immediately instead of blocking/timing out. Progress of update_index
+    itself is tracked in command_status.json (update_index_status field),
+    same as the existing update_scripts views.
+    """
+    permission_classes = (IsAdminUser,)
+
+    def post(self, request):
+        Thread(target=_run_update_index_and_cleanup).start()
+        return Response(
+            {
+                'status': 'success',
+                'message': 'update_index and remove_unused_indexes have been started in the background',
+            },
+            status=status.HTTP_202_ACCEPTED
+        )
+
+
+class SyncSingleCourseView(APIView):
+    """
+    Sync a single course run from LMS into discovery, equivalent in effect to
+    `refresh_course_metadata --partner_code=openedx` but scoped to one course,
+    instead of refreshing the entire partner catalog.
+
+    Reuses CoursesApiDataLoader.process_single_course_run, the same method
+    refresh_course_metadata uses per course run, just fed a single course
+    fetched directly from LMS instead of the full paginated course list.
+
+    POST body:
+    {
+        "course_id": "<course run key>"
+    }
+    """
+    permission_classes = (IsAdminUser,)
+
+    def post(self, request):
+        course_id = request.data.get('course_id')
+        if not course_id:
+            return Response(
+                {'status': 'fail', 'message': 'course_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        partner_code = 'dev' if settings.DEBUG else 'openedx'
+        partner = Partner.objects.filter(short_code=partner_code).first()
+        if partner is None:
+            return Response(
+                {'status': 'fail', 'message': f"No partner found with short_code '{partner_code}'"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        loader = CoursesApiDataLoader(partner, partner.courses_api_url)
+
+        try:
+            response = loader.api_client.get(f'{loader.api_url}/courses/{course_id}/')
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            if e.response is not None and e.response.status_code == 404:
+                return Response(
+                    {'status': 'fail', 'message': f'No course found in LMS for course_id: {course_id}'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            log.error(f"LMS request failed while syncing course {course_id}: {str(e)}")
+            return Response(
+                {'status': 'fail', 'message': f'LMS request failed: {str(e)}'},
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+        except requests.exceptions.RequestException as e:
+            log.error(f"LMS request failed while syncing course {course_id}: {str(e)}")
+            return Response(
+                {'status': 'fail', 'message': f'LMS request failed: {str(e)}'},
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+
+        try:
+            loader.process_single_course_run(response.json())
+        except Exception as e:
+            log.error(f"Error syncing course {course_id}: {str(e)}")
+            return Response(
+                {'status': 'fail', 'message': f'An error occurred while syncing course: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response(
+            {'status': 'success', 'message': f'Course {course_id} synced successfully'},
+            status=status.HTTP_200_OK
+        )
+
 
 class ReindexProgramByUIDView(View):
     def get(self, request, uuid):

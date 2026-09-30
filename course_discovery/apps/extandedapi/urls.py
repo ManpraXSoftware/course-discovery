@@ -28,5 +28,8 @@ urlpatterns = [
 
     path('mx-custom-course-search/', MXCustomSearch.as_view(), name='mx_custom_course_search'),
 
+    path('updateprogramcourses/', UpdateProgramCourses.as_view(), name='updateprogramcourses'),
+    path('updateindex/', UpdateIndexView.as_view(), name='updateindex'),
+    path('syncsinglecourse/', SyncSingleCourseView.as_view(), name='syncsinglecourse'),
 
 ]
